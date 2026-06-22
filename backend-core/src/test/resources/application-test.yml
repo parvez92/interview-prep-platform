@@ -1,0 +1,14 @@
+spring:
+  config:
+    import: ""   # disable vault import in tests
+  cloud:
+    vault:
+      enabled: false
+
+app:
+  jwt:
+    secret: test-jwt-secret-that-is-long-enough-for-hs256
+    access-token-expiry-ms: 900000
+    refresh-token-expiry-ms: 604800000
+  cors:
+    allowed-origins: http://localhost:5173

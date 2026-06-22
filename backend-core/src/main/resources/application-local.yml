@@ -1,0 +1,12 @@
+spring:
+  cloud:
+    vault:
+      host: localhost
+      port: 8200
+      token: root
+
+app:
+  seed:
+    email: ${SEED_EMAIL:dev@example.com}
+    password: ${app.seed.password:changeme}
+    display-name: ${SEED_DISPLAY_NAME:Dev User}

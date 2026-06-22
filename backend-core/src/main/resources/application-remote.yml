@@ -1,0 +1,13 @@
+spring:
+  cloud:
+    vault:
+      host: ${VAULT_HOST}
+      port: ${VAULT_PORT:8200}
+      scheme: https
+      token: ${VAULT_TOKEN}
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME:preploop}
+
+server:
+  ssl:
+    enabled: true
