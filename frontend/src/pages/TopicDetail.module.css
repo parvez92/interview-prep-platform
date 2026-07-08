@@ -1,0 +1,119 @@
+.page { display: flex; flex-direction: column; gap: 20px; animation: fadeIn .15s var(--ease) both; }
+
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px;
+}
+.headerLeft { display: flex; align-items: flex-start; gap: 12px; flex: 1; }
+.doneToggle { padding: 2px; border-radius: 50%; transition: transform var(--t-fast); }
+.doneToggle:hover { transform: scale(1.1); }
+.title { font-family: var(--font-head); font-size: 1.375rem; font-weight: 700; margin-bottom: 6px; }
+.chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* Deep dive */
+.deepDive {
+  display: flex; gap: 12px;
+  padding: 16px 18px;
+  background: var(--accent-bg);
+  border: 1px solid #c5cef480;
+  border-radius: var(--radius);
+}
+.deepDiveIcon { flex-shrink: 0; margin-top: 2px; }
+.deepDiveConcept { font-size: .9rem; font-weight: 500; color: var(--ink); margin-bottom: 8px; }
+.deepDiveConcept p { margin: 0 0 8px; }
+.deepDiveConcept p:last-child { margin-bottom: 0; }
+.deepDivePoints  { list-style: disc; padding-left: 18px; font-size: .875rem; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
+.deepDiveAngle   { font-size: .8125rem; color: var(--accent); margin-top: 8px; }
+
+/* Tabs */
+.tabs {
+  display: flex; gap: 2px;
+  border-bottom: 2px solid var(--line);
+  flex-shrink: 0;
+}
+.tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  font-size: .875rem; font-weight: 450;
+  color: var(--ink-3);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+.tab:hover { color: var(--ink); }
+.tabActive  { color: var(--accent); border-color: var(--accent); font-weight: 600; }
+
+.tabContent { flex: 1; min-height: 300px; }
+
+/* Notes */
+.notesWrap { display: flex; flex-direction: column; gap: 8px; }
+.notesToolbar { display: flex; align-items: center; gap: 8px; }
+.notesToolbar .caption { flex: 1; }
+
+.noteEditor {
+  width: 100%; min-height: 400px;
+  padding: 16px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-mono); font-size: .875rem; line-height: 1.7;
+  color: var(--ink); resize: vertical;
+  outline: none;
+  transition: border-color var(--t-fast);
+}
+.noteEditor:focus { border-color: var(--accent); }
+
+.markdownPreview {
+  padding: 20px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius);
+  min-height: 400px;
+  font-size: .9rem; line-height: 1.75; color: var(--ink);
+}
+.markdownPreview h1,.markdownPreview h2,.markdownPreview h3 {
+  font-family: var(--font-head); margin: 20px 0 8px;
+}
+.markdownPreview code {
+  font-family: var(--font-mono); background: var(--line-2);
+  padding: 1px 5px; border-radius: 4px; font-size: .85em;
+}
+.markdownPreview pre { background: var(--ink); color: #e8e6e1; padding: 16px; border-radius: var(--radius-sm); overflow-x: auto; }
+.markdownPreview pre code { background: none; color: inherit; font-size: .85rem; }
+.markdownPreview ul,.markdownPreview ol { padding-left: 20px; }
+.markdownPreview li { margin: 4px 0; }
+.markdownPreview blockquote { border-left: 3px solid var(--accent); padding-left: 12px; color: var(--ink-2); }
+.markdownPreview a { color: var(--accent); }
+
+/* Lists */
+.listWrap { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; }
+
+.listRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: .875rem;
+  transition: border-color var(--t-fast);
+}
+.listRow:hover { border-color: var(--ink-4); }
+
+.resourceLabel {
+  flex: 1; color: var(--accent); font-size: .875rem;
+  display: flex; align-items: center; gap: 4px;
+}
+.resourceLabel:hover { text-decoration: underline; }
+
+.addRow { display: flex; gap: 8px; margin-top: 8px; }
+.aiRow  { margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line); }
+
+.input {
+  flex: 1; padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: .875rem; color: var(--ink);
+  outline: none;
+  transition: border-color var(--t-fast);
+}
+.input:focus { border-color: var(--accent); }
+.input::placeholder { color: var(--ink-4); }
+
+.doneText { text-decoration: line-through; color: var(--ink-4); }

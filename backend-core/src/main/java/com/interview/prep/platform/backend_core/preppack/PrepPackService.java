@@ -30,21 +30,33 @@ public class PrepPackService {
     }
 
     @SneakyThrows
+    @SuppressWarnings("unchecked")
     private Map<String, Object> generate(Long userId, Long interviewId) {
         Interview interview = interviewService.requireOwned(userId, interviewId);
         Map<String, Object> payload = Map.of(
                 "company", interview.getCompany(),
                 "role", interview.getRole(),
                 "jdText", interview.getJdText() != null ? interview.getJdText() : "");
-        Map<String, Object> result = aiClient.post(userId, "/ai/prep-pack", payload, "prep-pack");
+        Map<String, Object> aiResponse = aiClient.post(userId, "/ai/agents/prep-pack", payload, "prep-pack");
+
+        // AI agent response wraps data under "result" (string from agent loop or nested map)
+        Map<String, Object> data;
+        Object resultObj = aiResponse.get("result");
+        if (resultObj instanceof String s) {
+            data = objectMapper.readValue(s, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        } else if (resultObj instanceof Map<?, ?> m) {
+            data = (Map<String, Object>) m;
+        } else {
+            data = java.util.Map.of();
+        }
 
         PrepPack pack = new PrepPack();
         pack.setUserId(userId); pack.setInterviewId(interviewId);
-        pack.setTopicsJson(objectMapper.writeValueAsString(result.get("topics")));
-        pack.setQuestionsJson(objectMapper.writeValueAsString(result.get("questions")));
-        pack.setTipsJson(objectMapper.writeValueAsString(result.get("tips")));
+        pack.setTopicsJson(objectMapper.writeValueAsString(data.getOrDefault("topics", java.util.List.of())));
+        pack.setQuestionsJson(objectMapper.writeValueAsString(data.getOrDefault("questions", java.util.List.of())));
+        pack.setTipsJson(objectMapper.writeValueAsString(data.getOrDefault("tips", java.util.List.of())));
         prepPackRepository.save(pack);
-        return result;
+        return data;
     }
 
     @SneakyThrows

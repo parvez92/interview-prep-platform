@@ -1,0 +1,44 @@
+.page { max-width: 660px; animation: fadeIn .2s var(--ease) both; }
+
+.section { display: flex; flex-direction: column; gap: 0; margin-bottom: 16px; padding: 0; }
+.sectionHeader {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.sectionBody { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field .label { color: var(--ink-3); font-family: var(--font-mono); font-size: .7rem; letter-spacing: .03em; }
+.fieldHint { font-size: .8125rem; color: var(--ink-4); margin-top: -4px; }
+
+.providerGrid { display: flex; gap: 6px; flex-wrap: wrap; }
+.providerBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: .8125rem; font-weight: 500; color: var(--ink-2);
+  text-transform: capitalize; cursor: pointer;
+  transition: all var(--t-fast);
+}
+.providerBtn:hover { border-color: var(--accent); color: var(--accent); }
+.providerActive { background: var(--accent-bg); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+.desktopNote {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 14px;
+  background: var(--accent-bg); border-radius: var(--radius-sm);
+  font-size: .8125rem; color: var(--accent); line-height: 1.5;
+}
+
+.saveRow { display: flex; justify-content: flex-end; margin-top: 4px; }
+
+.modelGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.ollamaRow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm);
+}
+.ollamaRow .label { font-family: var(--font-mono); font-size: .7rem; color: var(--ink-3); white-space: nowrap; }

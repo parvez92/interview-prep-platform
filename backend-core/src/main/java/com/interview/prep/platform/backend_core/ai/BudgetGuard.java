@@ -18,13 +18,30 @@ public class BudgetGuard {
         return usageService.isOverBudget(userId) ? Tier.CHEAP : Tier.STRONG;
     }
 
+    public String resolveProvider(Long userId) {
+        return userSettingsRepository.findByUserId(userId)
+                .map(UserSettings::getLlmProvider)
+                .filter(p -> p != null && !p.isBlank())
+                .orElse("anthropic");
+    }
+
+    private static final String DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+
     public String resolveModel(Long userId) {
         UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
-        if (settings == null) return "claude-haiku-4-5-20251001";
+        if (settings == null) return DEFAULT_MODEL;
         Tier tier = resolveTier(userId);
-        return tier == Tier.STRONG
+        String model = tier == Tier.STRONG
                 ? settings.getLlmModelStrong()
                 : settings.getLlmModelCheap();
+        // fresh settings rows have no model configured yet — don't send a blank X-Model
+        return model != null && !model.isBlank() ? model : DEFAULT_MODEL;
+    }
+
+    public String resolveOllamaUrl(Long userId) {
+        return userSettingsRepository.findByUserId(userId)
+                .map(UserSettings::getOllamaUrl)
+                .orElse(null);
     }
 
     public boolean isBudgetWarning(Long userId) {

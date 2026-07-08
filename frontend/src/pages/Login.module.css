@@ -1,0 +1,50 @@
+.page {
+  min-height: 100vh; background: var(--paper);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+
+.card {
+  width: 380px; max-width: 100%;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); padding: 40px 32px;
+  box-shadow: var(--shadow-md);
+  animation: fadeIn .25s var(--ease) both;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-head); font-size: 1.25rem; font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.sub { color: var(--ink-3); font-size: .875rem; margin-bottom: 28px; }
+
+.form { display: flex; flex-direction: column; gap: 14px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field .label { color: var(--ink-3); font-family: var(--font-mono); font-size: .7rem; letter-spacing: .03em; }
+
+.error { color: var(--red); font-size: .8125rem; }
+
+.submitBtn { width: 100%; justify-content: center; padding: 11px; margin-top: 4px; }
+
+.modeTabs {
+  display: flex; border-bottom: 1px solid var(--line); margin-bottom: 22px;
+}
+.modeTab {
+  flex: 1; padding: 8px 0; font-size: .875rem; font-weight: 500;
+  color: var(--ink-3); background: none; border: none; border-bottom: 2px solid transparent;
+  cursor: pointer; transition: color .15s, border-color .15s;
+  margin-bottom: -1px;
+}
+.modeTab:hover { color: var(--ink); }
+.modeTabActive { color: var(--accent) !important; border-bottom-color: var(--accent) !important; }
+
+.switchRow {
+  text-align: center; margin-top: 18px; font-size: .8125rem; color: var(--ink-3);
+}
+.switchRow button {
+  background: none; border: none; color: var(--accent);
+  cursor: pointer; font-size: inherit; padding: 0; text-decoration: underline;
+}

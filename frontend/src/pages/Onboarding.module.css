@@ -1,0 +1,142 @@
+.page {
+  min-height: 100vh; background: var(--paper);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 40px 20px;
+  gap: 32px;
+}
+
+/* Stepper */
+.stepper {
+  display: flex; align-items: center; gap: 0;
+  width: 100%; max-width: 680px;
+}
+.stepItem { display: flex; align-items: center; flex: 1; position: relative; }
+.stepItem:last-child { flex: none; }
+
+.stepDot {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--line); color: var(--ink-4);
+  flex-shrink: 0; font-size: .8rem; font-weight: 600;
+  transition: background var(--t-mid), color var(--t-mid);
+  z-index: 1;
+}
+.stepActive { background: var(--accent); color: #fff; }
+.stepDone   { background: var(--green);  color: #fff; }
+
+.stepLabel { font-size: .8rem; color: var(--ink-3); position: absolute; top: 38px; left: 50%; transform: translateX(-50%); white-space: nowrap; }
+.stepLabelActive { color: var(--accent); font-weight: 600; }
+
+.stepLine { flex: 1; height: 2px; background: var(--line); margin: 0 4px; transition: background var(--t-mid); }
+.stepLineDone { background: var(--green); }
+
+/* Card */
+.card {
+  width: 100%; max-width: 680px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  animation: fadeIn .2s var(--ease) both;
+  margin-top: 24px;
+}
+
+.stepContent { padding: 36px; display: flex; flex-direction: column; gap: 20px; }
+.stepTitle { font-family: var(--font-head); font-size: 1.375rem; font-weight: 700; }
+.stepSub   { color: var(--ink-2); font-size: .9rem; margin-top: -8px; }
+
+/* Drop zone */
+.dropZone {
+  border: 2px dashed var(--line); border-radius: var(--radius);
+  padding: 48px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  cursor: pointer; color: var(--ink-3); font-size: .9rem; text-align: center;
+  transition: all var(--t-fast);
+}
+.dropZone:hover, .dropZoneActive { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+.dropZoneHasFile { border-color: var(--green); background: var(--green-bg); color: var(--green); border-style: solid; }
+.fileName { font-family: var(--font-mono); font-size: .85rem; }
+
+/* Profile */
+.profileGrid { display: flex; flex-direction: column; gap: 16px; }
+.profileMeta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chipList    { display: flex; flex-wrap: wrap; gap: 6px; }
+.expRow      { padding: 8px 0; border-bottom: 1px solid var(--line-2); font-size: .875rem; color: var(--ink-2); }
+.expRow:last-child { border-bottom: none; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field .label { color: var(--ink-3); font-family: var(--font-mono); font-size: .7rem; letter-spacing: .03em; }
+
+/* Targets */
+.formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* Plan */
+.planList { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px; }
+.planPhase {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  overflow: hidden;
+}
+.planPhaseHeader {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.planPhaseName { flex: 1; font-weight: 600; font-size: .875rem; }
+.planWeeks { padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+.planWeek  { display: flex; flex-direction: column; gap: 5px; }
+.planWeekTitle { font-family: var(--font-mono); font-size: .72rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; }
+
+.addTopicRow {
+  display: flex; align-items: center; gap: 6px; margin-top: 2px;
+}
+.addTopicInput {
+  flex: 1; font-size: .8rem; padding: 4px 8px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink);
+  font-family: inherit;
+}
+.addTopicInput:focus { outline: none; border-color: var(--accent); }
+
+/* Provider mode toggle */
+.modeRow {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+.modeBtn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px; border-radius: var(--radius);
+  border: 1.5px solid var(--line); background: var(--paper);
+  cursor: pointer; transition: all var(--t-fast); text-align: center;
+}
+.modeBtn:hover { border-color: var(--accent); background: var(--accent-bg); }
+.modeBtnActive { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+.modeBtnLabel { font-weight: 600; font-size: .85rem; }
+.modeBtnDesc  { font-size: .72rem; color: var(--ink-3); line-height: 1.2; }
+.modeBtnActive .modeBtnDesc { color: var(--accent); opacity: .75; }
+
+/* Ollama URL row */
+.ollamaRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: var(--radius);
+  border: 1px solid var(--line); background: var(--paper);
+}
+
+/* Desktop note */
+.desktopNote {
+  padding: 12px 16px; border-radius: var(--radius);
+  background: var(--amber-bg, #fff8ec); border: 1px solid var(--amber, #f59e0b);
+  font-size: .875rem; color: var(--ink-2);
+}
+
+/* Desktop paste-back */
+.desktopFlow {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.promptBox {
+  width: 100%; font-family: var(--font-mono); font-size: .78rem;
+  padding: 12px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--paper); color: var(--ink); resize: vertical;
+  line-height: 1.5;
+}
+.promptBox:focus { outline: none; border-color: var(--accent); }
+
+/* Nav */
+.nav { display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid var(--line); }

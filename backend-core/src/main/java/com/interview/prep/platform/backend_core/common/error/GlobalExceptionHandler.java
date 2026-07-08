@@ -7,10 +7,19 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(DesktopModeException.class)
+    public ResponseEntity<Map<String, Object>> handleDesktopMode(DesktopModeException ex) {
+        return ResponseEntity.ok(Map.of(
+                "desktop_mode", true,
+                "desktop_prompt", ex.getPrompt()
+        ));
+    }
 
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ErrorResponse> handleApiException(ApiException ex) {

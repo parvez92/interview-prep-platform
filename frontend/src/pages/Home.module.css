@@ -1,0 +1,65 @@
+.page { max-width: var(--content-max); animation: fadeIn .2s var(--ease) both; }
+
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 28px;
+}
+.greeting {
+  font-family: var(--font-head); font-size: 1.5rem; font-weight: 700;
+  color: var(--ink); margin-bottom: 4px;
+}
+.sub { font-size: .875rem; color: var(--ink-2); display: flex; align-items: center; gap: 4px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+}
+
+.cardLabel {
+  font-family: var(--font-mono); font-size: .7rem; letter-spacing: .04em;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px;
+}
+.cardHeader {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+}
+
+/* Readiness card spans 2 cols + 1 row */
+.readinessCard { grid-column: 1 / 3; }
+.readinessBody { display: flex; align-items: center; gap: 24px; }
+.trackBars { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+.trackItem { display: flex; flex-direction: column; gap: 4px; }
+.trackMeta { display: flex; justify-content: space-between; }
+.trackName  { font-size: .8rem; color: var(--ink-2); text-transform: capitalize; }
+.trackPct   { font-family: var(--font-mono); font-size: .75rem; font-weight: 600; }
+.trackBg    { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.trackFill  { height: 100%; border-radius: 99px; transition: width .5s var(--ease); }
+
+/* Today card spans 2 cols */
+.todayCard { grid-column: 3 / 5; }
+.todayList { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.todayItem {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--line);
+}
+.todayItem:last-child { border-bottom: none; }
+.todayLabel { font-size: .875rem; flex: 1; color: var(--ink); }
+.todayLabel:hover { color: var(--accent); }
+.todayEmpty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 20px 0; color: var(--ink-3); font-size: .875rem; }
+
+/* Pillar cards */
+.pillarCard {
+  display: flex; flex-direction: column; gap: 10px;
+  text-decoration: none; transition: box-shadow var(--t-fast), transform var(--t-fast);
+  position: relative; overflow: hidden;
+}
+.pillarCard:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.pillarIcon { font-size: 1.5rem; }
+.pillarTitle { font-size: .875rem; color: var(--ink-2); font-weight: 500; }
+.pillarPct   { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700; line-height: 1; }
+.pillarBar   { height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: auto; }
+.pillarFill  { height: 100%; border-radius: 99px; transition: width .6s var(--ease); }
+
+/* Budget card spans full 2 cols */
+.budgetCard { grid-column: 3 / 5; }

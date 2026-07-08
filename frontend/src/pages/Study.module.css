@@ -1,0 +1,90 @@
+.layout {
+  display: flex;
+  height: calc(100vh - var(--header-h));
+  margin: -32px -28px;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+.sidebarHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 16px 12px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.phaseList { overflow-y: auto; flex: 1; padding: 8px 0; }
+
+.phaseSection { border-bottom: 1px solid var(--line-2); }
+
+.phaseHeader {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 10px 14px;
+  text-align: left; cursor: pointer;
+  transition: background var(--t-fast);
+  color: var(--ink);
+}
+.phaseHeader:hover { background: var(--paper); }
+
+.phaseIcon { font-size: 1rem; flex-shrink: 0; }
+.phaseMeta { flex: 1; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.phaseName { font-size: .8125rem; font-weight: 600; }
+.phaseProgress { display: flex; align-items: center; gap: 6px; }
+.phaseBar { flex: 1; height: 4px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.phaseBarFill { height: 100%; border-radius: 99px; transition: width .4s var(--ease); }
+
+.weekList { padding: 4px 0 8px; }
+
+.weekGroup { padding: 0 0 4px; }
+
+.weekHeader {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; padding: 6px 14px 6px 24px;
+  color: var(--ink-3); font-size: .75rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .04em;
+  cursor: pointer; text-align: left;
+  transition: color var(--t-fast);
+}
+.weekHeader:hover { color: var(--ink-2); }
+.weekTitle { flex: 1; }
+
+.topicList { list-style: none; padding: 0; }
+
+.topicRow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px 7px 36px;
+  font-size: .8125rem; color: var(--ink-2);
+  transition: background var(--t-fast), color var(--t-fast);
+  border-radius: 0;
+  overflow: hidden;
+}
+.topicRow:hover { background: var(--accent-bg); color: var(--accent); }
+
+.topicName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topicDone { color: var(--ink-4); text-decoration: line-through; }
+
+.topicChips { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Main workspace */
+.workspace {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px;
+  background: var(--paper);
+}
+
+.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: var(--ink-3); font-size: .9rem;
+}

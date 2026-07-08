@@ -2,6 +2,7 @@ package com.interview.prep.platform.backend_core.user;
 
 import com.interview.prep.platform.backend_core.user.dto.LoginRequest;
 import com.interview.prep.platform.backend_core.user.dto.RefreshRequest;
+import com.interview.prep.platform.backend_core.user.dto.RegisterRequest;
 import com.interview.prep.platform.backend_core.user.dto.TokenResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/register")
+    public ResponseEntity<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.register(request.email(), request.password(), request.displayName()));
+    }
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {

@@ -1,0 +1,60 @@
+.overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+
+.modal {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg, var(--shadow));
+  width: 100%; max-width: 680px; max-height: 90vh;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 24px; overflow-y: auto;
+}
+
+.header { display: flex; align-items: center; justify-content: space-between; }
+.title  { font-family: var(--font-head); font-size: 1rem; font-weight: 700; }
+.close  {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-3); padding: 4px; border-radius: 4px;
+  display: flex; align-items: center;
+}
+.close:hover { color: var(--ink); background: var(--paper); }
+
+.hint { font-size: .875rem; color: var(--ink-2); margin: -4px 0; }
+
+.promptBox {
+  position: relative;
+  background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--radius); overflow: hidden;
+}
+.promptText {
+  font-family: var(--font-mono); font-size: .75rem; color: var(--ink-2);
+  white-space: pre-wrap; word-break: break-word;
+  padding: 12px; margin: 0;
+  max-height: 240px; overflow-y: auto;
+}
+.copyBtn {
+  position: absolute; top: 8px; right: 8px;
+  display: flex; align-items: center; gap: 5px;
+  font-size: .75rem; font-weight: 600;
+  padding: 5px 10px; border-radius: var(--radius-sm);
+  background: var(--accent); color: #fff; border: none; cursor: pointer;
+  transition: opacity var(--t-fast);
+}
+.copyBtn:hover { opacity: .85; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.label { font-family: var(--font-mono); font-size: .7rem; color: var(--ink-3); letter-spacing: .03em; }
+.pasteArea {
+  width: 100%; font-family: var(--font-mono); font-size: .8rem;
+  padding: 10px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--paper); color: var(--ink); resize: vertical;
+  line-height: 1.5; box-sizing: border-box;
+}
+.pasteArea:focus { outline: none; border-color: var(--accent); }
+
+.error { font-size: .8125rem; color: var(--red, #ef4444); }
+
+.footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }

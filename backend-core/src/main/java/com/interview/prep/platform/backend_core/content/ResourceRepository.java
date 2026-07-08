@@ -7,5 +7,6 @@ import java.util.Optional;
 
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
     List<Resource> findByUserIdAndTopicIdOrderByDisplayOrderAsc(Long userId, Long topicId);
+    List<Resource> findByUserIdAndTopicIdAndSource(Long userId, Long topicId, String source);
     Optional<Resource> findByIdAndUserId(Long id, Long userId);
 }

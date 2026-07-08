@@ -17,7 +17,8 @@ RUN ./gradlew bootJar --no-daemon -x test
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 FROM eclipse-temurin:26-jre-noble AS runtime
 
-# Non-root user for security
+# Install curl for health checks, then create non-root user
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
 RUN groupadd --system appgroup && useradd --system --gid appgroup appuser
 
 WORKDIR /app

@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +34,11 @@ public class UsageService {
     public UsageSummaryDto getSummary(Long userId) {
         BigDecimal monthCost = currentMonthCost(userId);
         UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
-        BigDecimal budget = settings != null ? settings.getMonthlyBudgetUsd() : null;
-        List<UsageLog> logs = usageLogRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        return new UsageSummaryDto(monthCost, budget, logs.size());
+        BigDecimal budget = (settings != null && settings.getMonthlyBudgetUsd() != null)
+                ? settings.getMonthlyBudgetUsd() : BigDecimal.valueOf(20);
+        BigDecimal remaining = budget.subtract(monthCost).max(BigDecimal.ZERO);
+        boolean warning = monthCost.compareTo(budget.multiply(BigDecimal.valueOf(0.8))) >= 0;
+        return new UsageSummaryDto(monthCost, budget, remaining, warning);
     }
 
     @Transactional

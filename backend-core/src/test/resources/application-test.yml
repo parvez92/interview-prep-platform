@@ -12,3 +12,8 @@ app:
     refresh-token-expiry-ms: 604800000
   cors:
     allowed-origins: http://localhost:5173
+  ai-service:
+    url: http://localhost:${test.wiremock.port:18080}
+    service-token: test-inter-service-token
+  storage:
+    local-root: ${java.io.tmpdir}/preploop-test-files

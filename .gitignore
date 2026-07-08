@@ -1,0 +1,19 @@
+# Build output
+backend-core/build/
+backend-core/.gradle/
+out/
+frontend/dist/
+
+# Dependencies / virtualenvs
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Test artifacts
+e2e/test-results/
+e2e/playwright-report/
+
+# OS / local
+.DS_Store
+.env

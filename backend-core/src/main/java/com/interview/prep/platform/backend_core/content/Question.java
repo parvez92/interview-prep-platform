@@ -22,6 +22,10 @@ public class Question {
     @Column(nullable = false, columnDefinition = "text")
     private String text;
 
+    /** "manual" (user-entered) or "ai" — AI rows are replaced on regeneration */
+    @Column(nullable = false)
+    private String source = "manual";
+
     @Column(nullable = false)
     private int displayOrder;
 }

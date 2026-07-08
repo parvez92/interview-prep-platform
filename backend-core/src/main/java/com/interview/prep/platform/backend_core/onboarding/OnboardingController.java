@@ -17,9 +17,21 @@ public class OnboardingController {
     private final OnboardingService onboardingService;
 
     @PostMapping("/resume")
-    public ResponseEntity<Map<String, Object>> uploadResume(@CurrentUser Long userId,
-                                                            @RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(onboardingService.uploadResume(userId, file));
+    public ResponseEntity<Map<String, Object>> uploadResume(
+            @CurrentUser Long userId,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "X-Override-Provider", required = false) String providerOverride,
+            @RequestHeader(value = "X-Ollama-Url",        required = false) String ollamaUrl,
+            @RequestHeader(value = "X-Ollama-Model",      required = false) String ollamaModel) {
+        return ResponseEntity.ok(onboardingService.uploadResume(userId, file, providerOverride, ollamaUrl, ollamaModel));
+    }
+
+    @PostMapping("/resume/manual")
+    public ResponseEntity<Map<String, Object>> uploadResumeManual(
+            @CurrentUser Long userId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("parsedJson") String parsedJson) {
+        return ResponseEntity.ok(onboardingService.uploadResumeManual(userId, file, parsedJson));
     }
 
     @PutMapping("/profile")
@@ -29,8 +41,16 @@ public class OnboardingController {
     }
 
     @PostMapping("/plan")
-    public ResponseEntity<Map<String, Object>> generatePlan(@CurrentUser Long userId) {
-        return ResponseEntity.ok(onboardingService.generatePlan(userId));
+    public ResponseEntity<Map<String, Object>> generatePlan(
+            @CurrentUser Long userId,
+            @RequestBody(required = false) Map<String, Object> body) {
+        return ResponseEntity.ok(onboardingService.generatePlan(userId, body));
+    }
+
+    @PostMapping("/plan/manual")
+    public ResponseEntity<Map<String, Object>> submitPlanManual(@CurrentUser Long userId,
+                                                                @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(onboardingService.submitPlanManual(userId, body));
     }
 
     @PutMapping("/plan/commit")

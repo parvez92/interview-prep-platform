@@ -31,7 +31,7 @@ public class MockService {
         session.setTopicSlug(topicSlug != null ? topicSlug : "general");
         mockSessionRepository.save(session);
 
-        Map<String, Object> result = aiClient.post(userId, "/ai/mock/start",
+        Map<String, Object> result = aiClient.post(userId, "/ai/mock",
                 Map.of("sessionId", session.getId(), "topicSlug", session.getTopicSlug()), "mock-start");
 
         session.setTurnsJson(objectMapper.writeValueAsString(result.get("turns")));

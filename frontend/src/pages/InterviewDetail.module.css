@@ -1,0 +1,65 @@
+.page { max-width: 760px; animation: fadeIn .2s var(--ease) both; }
+
+.back {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: var(--ink-3); font-size: .8125rem; margin-bottom: 20px;
+  transition: color var(--t-fast);
+}
+.back:hover { color: var(--accent); }
+
+.header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 20px;
+}
+.company { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700; }
+.role    { color: var(--ink-2); font-size: .9375rem; margin-top: 3px; }
+.headerActions { display: flex; gap: 10px; }
+
+.body { display: flex; flex-direction: column; gap: 24px; margin-top: 20px; }
+
+.section {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 20px;
+}
+
+.qRow {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 0; border-bottom: 1px solid var(--line-2);
+}
+.qRow:last-of-type { border-bottom: none; }
+.qText { font-size: .875rem; color: var(--ink); line-height: 1.5; }
+.qMeta { display: flex; align-items: center; gap: 8px; }
+
+.addQ { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.qInput {
+  width: 100%; padding: 10px 12px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: .875rem; color: var(--ink);
+  outline: none; resize: none;
+  transition: border-color var(--t-fast);
+}
+.qInput:focus { border-color: var(--accent); }
+
+.addQMeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.slugInput {
+  padding: 7px 10px; flex: 1; min-width: 160px;
+  background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-family: var(--font-mono); font-size: .8rem; color: var(--ink);
+  outline: none;
+  transition: border-color var(--t-fast);
+}
+.slugInput:focus { border-color: var(--accent); }
+
+.ratingRow { display: flex; align-items: center; gap: 8px; }
+
+.packTopics { display: flex; flex-direction: column; gap: 8px; }
+.packTopic {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 10px 14px;
+  background: var(--accent-bg);
+  border: 1px solid #c5cef460; border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: border-color var(--t-fast);
+  font-size: .875rem;
+}
+.packTopic:hover { border-color: var(--accent); }

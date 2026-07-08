@@ -29,7 +29,7 @@ public class PlanController {
         Map<String, Object> payload = Map.of(
                 "progress", Map.of("done", done, "total", total),
                 "openFlags", flags);
-        Map<String, Object> result = aiClient.post(userId, "/ai/coach", payload, "plan-rebalance");
+        Map<String, Object> result = aiClient.post(userId, "/ai/agents/coach", payload, "plan-rebalance");
         return ResponseEntity.ok(result);
     }
 }

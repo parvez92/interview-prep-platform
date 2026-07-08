@@ -36,6 +36,9 @@ public class Topic {
     @Column(nullable = false)
     private String tag = "new";
 
+    /** Plan-assigned category (dsa, system_design, …) — not the UI badge tag */
+    private String category;
+
     @Column(nullable = false)
     private String source = "standard";
 

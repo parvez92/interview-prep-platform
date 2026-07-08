@@ -1,0 +1,49 @@
+.page { animation: fadeIn .2s var(--ease) both; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+
+.filters { display: flex; gap: 4px; }
+.filterBtn {
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  font-size: .8125rem; font-weight: 500; color: var(--ink-3);
+  background: var(--panel); border: 1px solid var(--line);
+  transition: all var(--t-fast); text-transform: capitalize;
+}
+.filterBtn:hover { color: var(--ink); }
+.filterActive { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); }
+
+.sortToggle { display: flex; align-items: center; gap: 6px; }
+.sortBtn {
+  padding: 5px 10px; font-size: .8rem;
+  border-radius: var(--radius-sm); border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink-3);
+  transition: all var(--t-fast);
+}
+.sortActive { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.jobCard { display: flex; flex-direction: column; gap: 8px; }
+.dismissed { opacity: .5; }
+
+.top { display: flex; align-items: center; gap: 8px; }
+.fitBadge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 99px;
+  font-family: var(--font-head); font-size: .9rem; font-weight: 800; line-height: 1;
+}
+
+.company { display: flex; align-items: center; gap: 6px; }
+.companyName { font-weight: 600; font-size: .9rem; }
+
+.role   { font-size: .8125rem; color: var(--ink-2); }
+.meta   { display: flex; gap: 12px; font-size: .75rem; color: var(--ink-3); align-items: center; }
+.reason { font-size: .8125rem; color: var(--ink-2); line-height: 1.5; }
+.tags   { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.actions { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; align-items: center; }

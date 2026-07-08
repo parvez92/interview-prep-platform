@@ -1,0 +1,46 @@
+.page { animation: fadeIn .2s var(--ease) both; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+
+.card { display: flex; flex-direction: column; gap: 10px; }
+.cardTop { display: flex; justify-content: space-between; align-items: flex-start; }
+.cardTitle { font-weight: 600; font-size: .9375rem; color: var(--ink); }
+.cardActions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.starGrid { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.starRow { display: flex; gap: 10px; align-items: flex-start; }
+.starKey {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--accent);
+  font-family: var(--font-head); font-weight: 800; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.starText { font-size: .875rem; color: var(--ink-2); line-height: 1.55; margin: 0; }
+
+.prompts { font-size: .8125rem; color: var(--ink-2); }
+.prompts ul { padding-left: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px; }
+
+/* Modal */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,30,41,.35); backdrop-filter: blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; animation: fadeIn .15s var(--ease) both;
+}
+.modal {
+  background: var(--panel); border-radius: var(--radius-lg); padding: 28px;
+  width: 580px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: slideDown .2s var(--ease) both;
+}
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field .label { color: var(--ink-3); font-family: var(--font-mono); font-size: .7rem; letter-spacing: .03em; }
+
+.tagRow { display: flex; gap: 8px; }
+
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--line); }

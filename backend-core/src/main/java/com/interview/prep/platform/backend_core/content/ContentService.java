@@ -12,17 +12,86 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ContentService {
 
+    private static final String SOURCE_AI = "ai";
+
     private final ResourceRepository resourceRepository;
     private final ExerciseRepository exerciseRepository;
     private final QuestionRepository questionRepository;
     private final StudyService studyService;
+
+    // ── AI-generated content: replace previous AI rows, keep manual ones ────────
+
+    @Transactional
+    public void replaceAiResources(Long userId, String slug, List<ResourceDto> items) {
+        Topic topic = studyService.requireOwned(userId, slug);
+        resourceRepository.deleteAll(resourceRepository.findByUserIdAndTopicIdAndSource(userId, topic.getId(), SOURCE_AI));
+        List<Resource> kept = resourceRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId());
+        Set<String> seenUrls = kept.stream().map(r -> r.getUrl().strip()).collect(Collectors.toCollection(HashSet::new));
+        int order = kept.size();
+        for (ResourceDto dto : items) {
+            if (dto.url() == null || !seenUrls.add(dto.url().strip())) continue;
+            Resource r = new Resource();
+            r.setUserId(userId); r.setTopicId(topic.getId());
+            r.setLabel(dto.label()); r.setUrl(dto.url());
+            r.setSource(SOURCE_AI); r.setDisplayOrder(order++);
+            resourceRepository.save(r);
+        }
+    }
+
+    @Transactional
+    public void replaceAiExercises(Long userId, String slug, List<ExerciseDto> items) {
+        Topic topic = studyService.requireOwned(userId, slug);
+        List<Exercise> oldAi = exerciseRepository.findByUserIdAndTopicIdAndSource(userId, topic.getId(), SOURCE_AI);
+        // carry done-state over to regenerated exercises with the same title
+        Map<String, Boolean> doneByTitle = new HashMap<>();
+        for (Exercise e : oldAi) doneByTitle.put(normalize(e.getTitle()), e.isDone());
+        exerciseRepository.deleteAll(oldAi);
+        List<Exercise> kept = exerciseRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId());
+        Set<String> seenTitles = kept.stream().map(e -> normalize(e.getTitle())).collect(Collectors.toCollection(HashSet::new));
+        int order = kept.size();
+        for (ExerciseDto dto : items) {
+            String key = normalize(dto.title());
+            if (!seenTitles.add(key)) continue;
+            Exercise e = new Exercise();
+            e.setUserId(userId); e.setTopicId(topic.getId());
+            e.setTitle(dto.title()); e.setRepoUrl(dto.repoUrl());
+            e.setDone(doneByTitle.getOrDefault(key, false));
+            e.setSource(SOURCE_AI); e.setDisplayOrder(order++);
+            exerciseRepository.save(e);
+        }
+    }
+
+    @Transactional
+    public void replaceAiQuestions(Long userId, String slug, List<QuestionDto> items) {
+        Topic topic = studyService.requireOwned(userId, slug);
+        questionRepository.deleteAll(questionRepository.findByUserIdAndTopicIdAndSource(userId, topic.getId(), SOURCE_AI));
+        List<Question> kept = questionRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId());
+        Set<String> seenTexts = kept.stream().map(q -> normalize(q.getText())).collect(Collectors.toCollection(HashSet::new));
+        int order = kept.size();
+        for (QuestionDto dto : items) {
+            if (!seenTexts.add(normalize(dto.text()))) continue;
+            Question q = new Question();
+            q.setUserId(userId); q.setTopicId(topic.getId()); q.setText(dto.text());
+            q.setSource(SOURCE_AI); q.setDisplayOrder(order++);
+            questionRepository.save(q);
+        }
+    }
+
+    private static String normalize(String s) {
+        return s == null ? "" : s.strip().toLowerCase();
+    }
 
     // ── Resources ──────────────────────────────────────────────────────────────
 

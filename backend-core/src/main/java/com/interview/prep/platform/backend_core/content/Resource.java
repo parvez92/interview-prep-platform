@@ -25,6 +25,10 @@ public class Resource {
     @Column(nullable = false, length = 2000)
     private String url;
 
+    /** "manual" (user-entered) or "ai" — AI rows are replaced on regeneration */
+    @Column(nullable = false)
+    private String source = "manual";
+
     @Column(nullable = false)
     private int displayOrder;
 }

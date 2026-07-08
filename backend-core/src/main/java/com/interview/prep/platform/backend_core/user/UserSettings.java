@@ -28,6 +28,7 @@ public class UserSettings {
 
     private String llmModelStrong;
     private String llmModelCheap;
+    private String ollamaUrl;
 
     @Column(nullable = false)
     private BigDecimal monthlyBudgetUsd = new BigDecimal("20.00");

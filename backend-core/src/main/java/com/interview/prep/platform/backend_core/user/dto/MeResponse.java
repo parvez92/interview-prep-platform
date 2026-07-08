@@ -14,6 +14,7 @@ public record MeResponse(UserDto user, SettingsDto settings, boolean onboarded) 
                         settings.getLlmProvider(),
                         settings.getLlmModelStrong(),
                         settings.getLlmModelCheap(),
+                        settings.getOllamaUrl(),
                         settings.getMonthlyBudgetUsd()
                 ),
                 settings.isOnboarded()
@@ -26,6 +27,7 @@ public record MeResponse(UserDto user, SettingsDto settings, boolean onboarded) 
             String llmProvider,
             String modelStrong,
             String modelCheap,
+            String ollamaUrl,
             BigDecimal monthlyBudgetUsd
     ) {}
 }

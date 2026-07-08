@@ -19,6 +19,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    public TokenResponse register(String email, String password, String displayName) {
+        if (userRepository.findByEmail(email.toLowerCase().strip()).isPresent()) {
+            throw new ApiException(ErrorCode.CONFLICT, HttpStatus.CONFLICT, "Email already in use");
+        }
+        AppUser user = new AppUser();
+        user.setEmail(email.toLowerCase().strip());
+        user.setPasswordHash(passwordEncoder.encode(password));
+        if (displayName != null && !displayName.isBlank()) user.setDisplayName(displayName.strip());
+        userRepository.save(user);
+        return buildTokens(user.getId());
+    }
+
     public TokenResponse login(String email, String password) {
         AppUser user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ApiException(ErrorCode.BAD_CREDENTIALS, HttpStatus.UNAUTHORIZED));
