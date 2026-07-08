@@ -247,7 +247,10 @@ public class OnboardingService {
                     week.setUserId(userId);
                     week.setPhase(phase);
                     week.setCode("w-" + phaseOrd + "-" + weekNum);
-                    week.setTitle("Week " + weekNum);
+                    String weekTitle = str(wd, "title", "Week " + weekNum);
+                    if (weekTitle.isBlank() || weekTitle.startsWith("Week ")) weekTitle = "Week " + weekNum;
+                    else weekTitle = "Week " + weekNum + " — " + (weekTitle.length() > 150 ? weekTitle.substring(0, 150) : weekTitle);
+                    week.setTitle(weekTitle);
                     week.setDisplayOrder(weekOrd++);
                     week = weekRepository.save(week);
 

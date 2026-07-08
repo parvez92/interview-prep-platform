@@ -280,7 +280,7 @@ async def generate_plan(
         "profile": profile,
         "additional_context": body.additionalContext or "",
         # bump when plan.md changes materially — cache entries never expire
-        "v": 2,
+        "v": 3,
     })
 
     if not body.regenerate:

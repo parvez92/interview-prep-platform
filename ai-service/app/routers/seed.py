@@ -49,7 +49,7 @@ async def seed_plan(
 
     async def seed_batch(batch: list[dict]) -> tuple[list, int, float, bool, str]:
         """Returns (topics, tokens, cost, cached, model) for one batch."""
-        cache_key = make_cache_key("seed", {"user_id": user_id, "slugs": sorted(t["slug"] for t in batch), "v": 2})
+        cache_key = make_cache_key("seed", {"user_id": user_id, "slugs": sorted(t["slug"] for t in batch), "v": 3})
         cached = await cache_get(pool, user_id, cache_key)
         if cached:
             return cached["content"].get("topics", []), 0, 0.0, True, cached["model"]

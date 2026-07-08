@@ -134,9 +134,16 @@ export function Onboarding() {
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [desktopPrompt, setDesktopPrompt] = useState<string | null>(null);
+  const [seedPrompt, setSeedPrompt] = useState<string | null>(null);
   // bumped per generation so PlanStep remounts with the fresh plan (it holds local edit state)
   const [planVersion, setPlanVersion] = useState(0);
   const nav = useNavigate();
+
+  const finishOnboarding = () => {
+    sessionStorage.removeItem(ONBOARDING_KEY);
+    queryClient.removeQueries({ queryKey: ['me'] });
+    nav('/');
+  };
 
   useEffect(() => {
     try {
@@ -247,6 +254,19 @@ export function Onboarding() {
             loading={loading}
           />
         )}
+        {seedPrompt && (
+          <DesktopPromptModal
+            prompt={seedPrompt}
+            pasteLabel='Paste the JSON — {"topics":[{"slug":"...","resources":[...],"exercises":[...],"questions":[...]}]}. Or close to skip; each topic has its own Generate button.'
+            expectJson
+            onSubmit={async (json) => {
+              await api.post('/ai/seed-plan/manual', JSON.parse(json));
+              setSeedPrompt(null);
+              finishOnboarding();
+            }}
+            onClose={() => { setSeedPrompt(null); finishOnboarding(); }}
+          />
+        )}
         {desktopPrompt && (
           <DesktopPromptModal
             prompt={desktopPrompt}
@@ -276,10 +296,15 @@ export function Onboarding() {
                 await api.put('/onboarding/plan/commit', { phases: editedPlan });
                 // Seed resources/exercises/questions for all topics.
                 // Non-fatal — per-tab "Generate with AI" works as fallback.
-                try { await api.post('/ai/seed-plan'); } catch { /* ignore */ }
-                sessionStorage.removeItem(ONBOARDING_KEY);
-                queryClient.removeQueries({ queryKey: ['me'] });
-                nav('/');
+                try {
+                  const seed = await api.post<{ desktop_mode?: boolean; desktop_prompt?: string }>('/ai/seed-plan');
+                  if (seed.data.desktop_mode && seed.data.desktop_prompt) {
+                    // desktop mode: offer the seed prompt for paste-back instead of dropping it
+                    setSeedPrompt(seed.data.desktop_prompt);
+                    return;
+                  }
+                } catch { /* ignore */ }
+                finishOnboarding();
               } finally { setLoading(false); }
             }}
             loading={loading}

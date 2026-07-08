@@ -34,6 +34,12 @@ public class AiGatewayController {
         return ResponseEntity.ok(aiGatewayService.seedPlan(userId));
     }
 
+    @PostMapping("/seed-plan/manual")
+    public ResponseEntity<Map<String, Object>> seedPlanManual(@CurrentUser Long userId,
+                                                              @RequestBody Map<String, Object> body) {
+        return ResponseEntity.ok(aiGatewayService.seedPlanManual(userId, body));
+    }
+
     @PostMapping("/mock")
     public ResponseEntity<Map<String, Object>> mock(@CurrentUser Long userId,
                                                     @RequestBody Map<String, Object> body) {

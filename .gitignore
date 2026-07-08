@@ -17,3 +17,6 @@ e2e/playwright-report/
 # OS / local
 .DS_Store
 .env
+
+# personal reference material
+docs/interview-prep-tracker.html

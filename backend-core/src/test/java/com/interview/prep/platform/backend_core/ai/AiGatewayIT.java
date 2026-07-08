@@ -212,6 +212,31 @@ class AiGatewayIT extends IntegrationTestBase {
         assertThat(afterSecond).filteredOn(q -> "manual".equals(q.getSource())).hasSize(1);
     }
 
+    // ── Desktop mode: pasted seed JSON persists through the same path ────────
+
+    @Test
+    void seedPlanManual_persistsPastedTopics() throws Exception {
+        Topic topic = createTopic("arrays");
+
+        mockMvc.perform(post("/api/ai/seed-plan/manual")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("topics", List.of(Map.of(
+                                "slug", "arrays",
+                                "questions", List.of(Map.of("text", "What is a two-pointer sweep?"))))))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.seeded").value(1));
+
+        assertThat(questionRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(testUserId, topic.getId()))
+                .hasSize(1);
+
+        mockMvc.perform(post("/api/ai/seed-plan/manual")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isUnprocessableEntity());
+    }
+
     // ── Mock interview: start → turn → completion feeds the loop ─────────────
 
     @Test
