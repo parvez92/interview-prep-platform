@@ -38,6 +38,18 @@ app:
     service-token: ${ai.service.token:dev-service-token}
   storage:
     local-root: ${STORAGE_ROOT:${user.home}/.preploop/files}
+  gmail:
+    enabled: ${GMAIL_ENABLED:false}
+    # OAuth client + refresh token come from Vault (secret/backend-core) — never from config
+    client-id: ${gmail.client.id:}
+    client-secret: ${gmail.client.secret:}
+    refresh-token: ${gmail.refresh.token:}
+    # when set, only mail the user routed to this Gmail label is ever fetched;
+    # otherwise a sender allowlist of job boards/ATS domains is used
+    label: ${GMAIL_LABEL:}
+    lookback-days: 7
+    max-results: 25
+    poll-interval-ms: 1800000
 
 management:
   endpoints:

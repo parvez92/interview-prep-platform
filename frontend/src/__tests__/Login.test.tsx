@@ -6,12 +6,17 @@ import { Login } from '@/pages/Login';
 import { renderWithProviders } from '@/test/render';
 import { server } from '@/test/server';
 
+// the page also has a "Sign in" mode tab — target the actual submit button
+const submitButton = () =>
+  screen.getAllByRole('button', { name: /sign in/i })
+    .find((b) => b.getAttribute('type') === 'submit') as HTMLButtonElement;
+
 describe('Login page', () => {
   it('renders the login form', () => {
     renderWithProviders(<Login />);
     expect(screen.getByText('PrepLoop')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('you@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Sign in')).toBeInTheDocument();
+    expect(submitButton()).toBeInTheDocument();
   });
 
   it('fills in credentials and submits successfully', async () => {
@@ -20,7 +25,7 @@ describe('Login page', () => {
 
     await user.type(screen.getByPlaceholderText('you@example.com'), 'test@prep.test');
     await user.type(screen.getByDisplayValue(''), 'password');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(submitButton());
 
     // No error shown after successful login
     await waitFor(() => {
@@ -36,7 +41,7 @@ describe('Login page', () => {
     const passwordInput = screen.getAllByRole('textbox').find(() => false) ??
       document.querySelector('input[type="password"]')!;
     await user.type(passwordInput, 'wrongpassword');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument();
@@ -59,7 +64,7 @@ describe('Login page', () => {
     const pw = document.querySelector('input[type="password"]') as HTMLInputElement;
     await user.type(pw, 'password');
 
-    const btn = screen.getByRole('button', { name: /sign in/i });
+    const btn = submitButton();
     await user.click(btn);
     expect(btn).toBeDisabled();
   });
@@ -72,7 +77,7 @@ describe('Login page', () => {
     await user.type(screen.getByPlaceholderText('you@example.com'), 'bad@test.com');
     const pw = document.querySelector('input[type="password"]') as HTMLInputElement;
     await user.type(pw, 'wrongpass');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(submitButton());
 
     await waitFor(() => {
       expect(screen.getByText(/invalid email or password/i)).toBeInTheDocument();

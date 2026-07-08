@@ -14,6 +14,14 @@ export function useJobs(sort: 'fit' | 'recent' = 'fit', status?: string) {
   });
 }
 
+export function useSyncJobs() {
+  return useMutation({
+    mutationFn: () =>
+      api.post<{ fetched: number; matched: number; ingested: number }>('/jobs/sync').then((r) => r.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['jobs'] }),
+  });
+}
+
 export function usePatchJob() {
   return useMutation({
     mutationFn: ({ id, ...body }: { id: number } & Partial<Job>) =>

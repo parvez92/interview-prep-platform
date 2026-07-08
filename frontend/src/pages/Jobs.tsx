@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { IconBuilding, IconMapPin, IconStar, IconCheck, IconX, IconBolt, IconExternalLink } from '@tabler/icons-react';
-import { useJobs, usePatchJob } from '@/hooks/useJobs';
-import { PageSpinner } from '@/components/ui/Spinner';
+import { isAxiosError } from 'axios';
+import { IconBuilding, IconMapPin, IconStar, IconCheck, IconX, IconBolt, IconExternalLink, IconRefresh, IconHelp } from '@tabler/icons-react';
+import { useJobs, usePatchJob, useSyncJobs } from '@/hooks/useJobs';
+import { PageSpinner, Spinner } from '@/components/ui/Spinner';
+import { GmailSetupModal } from '@/components/ui/GmailSetupModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Job } from '@/types';
 import styles from './Jobs.module.css';
@@ -14,6 +16,15 @@ export function Jobs() {
 
   const { data: jobs, isLoading } = useJobs(sort, filter === 'all' ? undefined : filter);
   const patch = usePatchJob();
+  const sync = useSyncJobs();
+  const [showSetup, setShowSetup] = useState(false);
+
+  const runSync = () => sync.mutate(undefined, {
+    onError: (e) => {
+      // 409 = Gmail not configured — walk the user through setup
+      if (isAxiosError(e) && e.response?.status === 409) setShowSetup(true);
+    },
+  });
 
   if (isLoading) return <PageSpinner />;
 
@@ -28,7 +39,19 @@ export function Jobs() {
           <h1 className="h1" style={{ fontFamily: 'var(--font-head)' }}>Jobs feed</h1>
           <p className="caption" style={{ marginTop: 4 }}>Scored against your résumé by AI. Parsed from Gmail job alerts.</p>
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {sync.isSuccess && <span className="caption">{sync.data.ingested} new of {sync.data.fetched} fetched</span>}
+          {sync.isError && <span className="caption" style={{ color: 'var(--red)' }}>Sync failed</span>}
+          <button className="btn btn-sm btn-ghost" onClick={() => setShowSetup(true)} title="Gmail setup guide">
+            <IconHelp size={13} /> Setup guide
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={runSync} disabled={sync.isPending}>
+            {sync.isPending ? <Spinner size={13} /> : <IconRefresh size={13} />} Sync Gmail
+          </button>
+        </div>
       </div>
+
+      {showSetup && <GmailSetupModal onClose={() => setShowSetup(false)} />}
 
       <div className={styles.toolbar}>
         <div className={styles.filters}>
