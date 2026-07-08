@@ -26,6 +26,10 @@ public class Question {
     @Column(nullable = false)
     private String source = "manual";
 
+    /** conceptual|tradeoff|implementation|debugging|scenario (pipeline v2) */
+    @Column(length = 16)
+    private String type;
+
     @Column(nullable = false)
     private int displayOrder;
 }

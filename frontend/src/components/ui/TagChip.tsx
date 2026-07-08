@@ -22,7 +22,7 @@ export function SourceChip({ source }: { source: Source }) {
   return <span className={`badge ${SRC_COLOR[source]}`}>{SRC_LABEL[source]}</span>;
 }
 
-export function KindChip({ kind }: { kind: 'new' | 'flagged' | 'drill' }) {
-  const cls = { new: 'badge-accent', flagged: 'badge-amber', drill: 'badge-neutral' }[kind];
+export function KindChip({ kind }: { kind: 'new' | 'flagged' | 'spaced' | 'drill' }) {
+  const cls = { new: 'badge-accent', flagged: 'badge-amber', spaced: 'badge-neutral', drill: 'badge-neutral' }[kind];
   return <span className={`badge ${cls}`}>{kind}</span>;
 }

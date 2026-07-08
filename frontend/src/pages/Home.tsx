@@ -62,18 +62,29 @@ export function Home() {
               Plan <IconArrowRight size={13} />
             </Link>
           </div>
-          {today && today.length > 0 ? (
-            <ul className={styles.todayList}>
-              {today.map((item, i) => (
-                <li key={i} className={styles.todayItem}>
-                  <KindChip kind={item.kind} />
-                  <Link to={`/study/${item.topicSlug}`} className={styles.todayLabel}>
-                    {item.label}
-                  </Link>
-                  {item.note && <span className="caption">{item.note}</span>}
-                </li>
-              ))}
-            </ul>
+          {today && today.items.length > 0 ? (
+            <>
+              <div className={styles.todayBudget}>
+                <div className={styles.todayBudgetBar}>
+                  <div
+                    className={styles.todayBudgetFill}
+                    style={{ width: Math.min(100, (today.plannedMin / Math.max(1, today.budgetMin)) * 100) + '%' }}
+                  />
+                </div>
+                <span className="caption">{today.plannedMin} of {today.budgetMin} min · {today.velocity}</span>
+              </div>
+              <ul className={styles.todayList}>
+                {today.items.map((item, i) => (
+                  <li key={i} className={styles.todayItem} title={item.note ?? ''}>
+                    <KindChip kind={item.kind} />
+                    <Link to={`/study/${item.topicSlug}`} className={styles.todayLabel}>
+                      {item.label}
+                    </Link>
+                    <span className="caption" style={{ flexShrink: 0 }}>{item.estMinutes}m</span>
+                  </li>
+                ))}
+              </ul>
+            </>
           ) : (
             <div className={styles.todayEmpty}>
               <IconCircleCheck size={28} style={{ color: 'var(--green)', opacity: .7 }} />

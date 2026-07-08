@@ -32,6 +32,9 @@ public class Exercise {
     @Column(nullable = false)
     private String source = "manual";
 
+    /** estimated effort, minutes (pipeline v2) */
+    private Integer estMinutes;
+
     @Column(nullable = false)
     private int displayOrder;
 }

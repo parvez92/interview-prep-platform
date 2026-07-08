@@ -14,14 +14,6 @@ Use each topic's category to pick the right source/exercise style, and its focus
 
 ## What to generate per topic
 
-**overview** — a compact deep-dive that teaches the topic's essence at a glance:
-- `concept`: 1-2 crisp sentences explaining the core idea and the trade-off at its heart.
-- `points`: 4-6 bullets, each a CONCRETE fact worth memorising — real flags, numbers, decision rules,
-  failure modes ("ZGC: sub-ms pauses regardless of heap — pick when P99 < 10ms", "Metaspace replaced
-  PermGen in Java 8; cap it in prod"). No vague advice.
-- `angle`: the master interview question for this topic, plus what a strong answer includes that
-  average answers miss (the differentiator).
-
 **resources** — 4-8 curated links that are genuinely the BEST learning material for that specific topic — not merely the most famous site in the category.
 Quality order: (1) official docs/reference for the exact feature, (2) canonical deep-dives by the technology's creators or recognized experts (books, engineering blogs, talks), (3) high-quality interactive practice. Prefer a lesser-known resource over a popular one whenever it is genuinely better.
 Reliable staples per category — EXAMPLES to draw on, never a required list:
@@ -43,12 +35,12 @@ Only include URLs you are confident actually exist — links are verified after 
 Each title is a concrete instruction with a success criterion where it fits ("Implement X with O(1) get/put; cover 3 eviction edge cases") — under 200 chars.
 
 **questions** — 6-10 realistic interview questions a thorough interviewer would ask.
-Mix conceptual, trade-off, implementation, debugging, and behavioural types; include at least one
-scenario question with realistic constraints. Make them specific to the topic — not generic.
+Tag each with its `type`: conceptual | tradeoff | implementation | debugging | scenario. Include at
+least one scenario question with realistic constraints. Make them specific to the topic — not generic.
 Calibrate for {{ profile.seniority if profile and profile.seniority is defined else 'mid-level' }} level.
 
 ## Output
 Return ONLY compact JSON (no whitespace, no markdown fences):
-{"topics":[{"slug":"exact-slug","concept":"...","points":["...","..."],"angle":"...","resources":[{"label":"Site – page","url":"https://..."}],"exercises":[{"title":"Task"}],"questions":[{"text":"Question?"}]}]}
+{"topics":[{"slug":"exact-slug","resources":[{"label":"Site – page","url":"https://..."}],"exercises":[{"title":"Task","est_minutes":45}],"questions":[{"text":"Question?","type":"tradeoff"}]}]}
 
-Cover EVERY slug from the input. Resource labels and exercise titles under 200 chars; questions and points may be longer.
+Cover EVERY slug from the input. Exercises carry an honest est_minutes (10-180). Resource labels and exercise titles under 200 chars; questions may be longer.

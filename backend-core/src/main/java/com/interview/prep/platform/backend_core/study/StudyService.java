@@ -41,7 +41,7 @@ public class StudyService {
                     int done = (int) allTopics.stream().filter(t -> "done".equals(t.getStatus())).count();
                     int total = allTopics.size();
                     List<WeekSummaryDto> weeks = phase.getWeeks().stream()
-                            .map(w -> new WeekSummaryDto(w.getCode(), w.getTitle(),
+                            .map(w -> new WeekSummaryDto(w.getCode(), w.getTitle(), w.getBridge(), w.getAnchor(),
                                     w.getTopics().stream().map(this::toTopicSummary).toList()))
                             .toList();
                     return new PhaseSummaryDto(phase.getCode(), phase.getName(), phase.getIcon(),
@@ -140,11 +140,11 @@ public class StudyService {
                 .toList();
         List<ExerciseDto> exercises = exerciseRepository
                 .findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId()).stream()
-                .map(e -> new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder()))
+                .map(e -> new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder(), e.getEstMinutes()))
                 .toList();
         List<QuestionDto> questions = questionRepository
                 .findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId()).stream()
-                .map(q -> new QuestionDto(q.getId(), q.getText(), q.getDisplayOrder()))
+                .map(q -> new QuestionDto(q.getId(), q.getText(), q.getDisplayOrder(), q.getType()))
                 .toList();
         TopicDetailDto.DeepDiveDto deepDive = new TopicDetailDto.DeepDiveDto(
                 topic.getConcept(), parseList(topic.getPoints()), topic.getAngle());

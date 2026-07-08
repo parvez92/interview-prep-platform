@@ -1,12 +1,10 @@
 package com.interview.prep.platform.backend_core.review;
 
 import com.interview.prep.platform.backend_core.common.security.CurrentUser;
-import com.interview.prep.platform.backend_core.review.dto.ReviewItemDto;
+import com.interview.prep.platform.backend_core.review.dto.TodayQueueDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/review")
@@ -16,8 +14,8 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @GetMapping("/today")
-    public ResponseEntity<List<ReviewItemDto>> today(@CurrentUser Long userId) {
-        return ResponseEntity.ok(reviewService.getTodayReview(userId));
+    public ResponseEntity<TodayQueueDto> today(@CurrentUser Long userId) {
+        return ResponseEntity.ok(reviewService.getTodayQueue(userId));
     }
 
     @PostMapping("/{slug}/done")

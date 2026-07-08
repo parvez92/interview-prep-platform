@@ -15,10 +15,15 @@ export const PROGRESS_RESPONSE = {
   ],
 };
 
-export const TODAY_RESPONSE = [
-  { kind: 'scheduled', topicSlug: 'arrays',  label: 'Arrays & Two-Pointer', note: 'W1' },
-  { kind: 'flagged',   topicSlug: 'dp',       label: 'Dynamic Programming',  note: 'Flagged 2 days ago' },
-];
+export const TODAY_RESPONSE = {
+  items: [
+    { kind: 'new',     topicSlug: 'arrays', label: 'Arrays & Two-Pointer', note: 'week 1 of your plan', estMinutes: 60 },
+    { kind: 'flagged', topicSlug: 'dp',     label: 'Dynamic Programming',  note: 'Flagged 2 days ago',  estMinutes: 45 },
+  ],
+  budgetMin: 100,
+  plannedMin: 105,
+  velocity: 'on pace',
+};
 
 export const INTERVIEWS_RESPONSE = [
   {

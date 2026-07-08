@@ -272,8 +272,11 @@ public class OnboardingService {
                         String category = str(td, "category", null);
                         if (category != null && !category.isBlank()) topic.setCategory(category);
                         topic.setDisplayOrder(topicOrd++);
-                        String hint = str(td, "resources_hint", str(td, "angle", null));
+                        // v2 plans send "scope"; older shapes used resources_hint/angle
+                        String hint = str(td, "scope", str(td, "resources_hint", str(td, "angle", null)));
                         if (hint != null) topic.setAngle(hint);
+                        String splitHint = str(td, "split_hint", null);
+                        if (splitHint != null && !splitHint.isBlank()) topic.setSplitHint(splitHint);
                         topicRepository.save(topic);
 
                         persistTopicContent(userId, topic.getId(), td);

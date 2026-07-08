@@ -68,6 +68,7 @@ public class ContentService {
             e.setUserId(userId); e.setTopicId(topic.getId());
             e.setTitle(dto.title()); e.setRepoUrl(dto.repoUrl());
             e.setDone(doneByTitle.getOrDefault(key, false));
+            e.setEstMinutes(dto.estMinutes());
             e.setSource(SOURCE_AI); e.setDisplayOrder(order++);
             exerciseRepository.save(e);
         }
@@ -84,6 +85,7 @@ public class ContentService {
             if (!seenTexts.add(normalize(dto.text()))) continue;
             Question q = new Question();
             q.setUserId(userId); q.setTopicId(topic.getId()); q.setText(dto.text());
+            q.setType(dto.type());
             q.setSource(SOURCE_AI); q.setDisplayOrder(order++);
             questionRepository.save(q);
         }
@@ -134,7 +136,7 @@ public class ContentService {
     public List<ExerciseDto> listExercises(Long userId, String slug) {
         Topic topic = studyService.requireOwned(userId, slug);
         return exerciseRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId()).stream()
-                .map(e -> new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder())).toList();
+                .map(e -> new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder(), e.getEstMinutes())).toList();
     }
 
     @Transactional
@@ -145,7 +147,7 @@ public class ContentService {
         e.setUserId(userId); e.setTopicId(topic.getId());
         e.setTitle(dto.title()); e.setRepoUrl(dto.repoUrl()); e.setDone(dto.done()); e.setDisplayOrder(order);
         exerciseRepository.save(e);
-        return new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder());
+        return new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder(), e.getEstMinutes());
     }
 
     @Transactional
@@ -156,7 +158,7 @@ public class ContentService {
         if (dto.repoUrl() != null) e.setRepoUrl(dto.repoUrl());
         e.setDone(dto.done());
         exerciseRepository.save(e);
-        return new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder());
+        return new ExerciseDto(e.getId(), e.getTitle(), e.getRepoUrl(), e.isDone(), e.getDisplayOrder(), e.getEstMinutes());
     }
 
     @Transactional
@@ -171,7 +173,7 @@ public class ContentService {
     public List<QuestionDto> listQuestions(Long userId, String slug) {
         Topic topic = studyService.requireOwned(userId, slug);
         return questionRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(userId, topic.getId()).stream()
-                .map(q -> new QuestionDto(q.getId(), q.getText(), q.getDisplayOrder())).toList();
+                .map(q -> new QuestionDto(q.getId(), q.getText(), q.getDisplayOrder(), q.getType())).toList();
     }
 
     @Transactional
@@ -181,7 +183,7 @@ public class ContentService {
         Question q = new Question();
         q.setUserId(userId); q.setTopicId(topic.getId()); q.setText(dto.text()); q.setDisplayOrder(order);
         questionRepository.save(q);
-        return new QuestionDto(q.getId(), q.getText(), q.getDisplayOrder());
+        return new QuestionDto(q.getId(), q.getText(), q.getDisplayOrder(), q.getType());
     }
 
     @Transactional

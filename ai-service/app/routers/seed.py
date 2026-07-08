@@ -28,6 +28,7 @@ class SeedPlanRequest(BaseModel):
     topics: list[dict]       # [{slug, title, tag}]
     profile: dict = {}       # parsed resume profile for context
     target_role: str = ""    # e.g. "Senior Backend Engineer"
+    batch_size: int | None = None  # caller hint — API models handle bigger batches than local ones
 
 
 @router.post("/seed-plan")
@@ -44,7 +45,8 @@ async def seed_plan(
         return {"result": {"topics": []}, "meta": {"model": "none", "cached": False, "tokens": 0, "cost": 0.0}}
 
     provider = get_provider(provider_name, model_name, ollama_url)
-    batches = [body.topics[i:i + BATCH_SIZE] for i in range(0, len(body.topics), BATCH_SIZE)]
+    size = min(12, max(3, body.batch_size)) if body.batch_size else BATCH_SIZE
+    batches = [body.topics[i:i + size] for i in range(0, len(body.topics), size)]
     sem = asyncio.Semaphore(MAX_CONCURRENT_BATCHES)
 
     async def seed_batch(batch: list[dict]) -> tuple[list, int, float, bool, str]:

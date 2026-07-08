@@ -1,0 +1,16 @@
+{
+  "category": "domain",
+  "topic": {
+    "title": "Payments idempotency — surviving retries without double-charging",
+    "concept": "Networks retry and clients double-click; idempotency makes the retried operation return the ORIGINAL result instead of executing twice. It is the load-bearing wall of payment APIs.",
+    "points": [
+      "Client sends an Idempotency-Key header (UUID); server stores key → response for a TTL (Stripe: 24h) and replays the stored response on repeats.",
+      "The key check and the write must be atomic — unique constraint on the key column, INSERT first, act second; check-then-act races under concurrency.",
+      "In-flight duplicate (same key, first still processing) → 409 or wait; different body with same key → 422, never silent reuse.",
+      "At-least-once delivery downstream (queues) needs consumer-side dedupe: processed-message table or exactly-once semantics (Kafka transactions).",
+      "Outbox pattern: write business row + event in ONE DB transaction; a relay publishes — avoids the dual-write inconsistency between DB and broker."
+    ],
+    "angle": "'A payment request timed out — the client retries. What happens in your design?' Strong answers walk the exact key lifecycle (miss, in-flight, replay) and name where atomicity comes from.",
+    "est_minutes": 75
+  }
+}

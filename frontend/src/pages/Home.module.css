@@ -38,6 +38,14 @@
 
 /* Today card spans 2 cols */
 .todayCard { grid-column: 3 / 5; }
+
+.todayBudget { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.todayBudgetBar {
+  flex: 1; height: 6px; border-radius: 99px;
+  background: var(--paper); border: 1px solid var(--line-2); overflow: hidden;
+}
+.todayBudgetFill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .4s var(--ease); }
+
 .todayList { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 .todayItem {
   display: flex; align-items: center; gap: 8px;

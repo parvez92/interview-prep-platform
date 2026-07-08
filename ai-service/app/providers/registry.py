@@ -13,6 +13,14 @@ def _key(provider: str, model: str) -> str:
     return f"{provider}:{model}"
 
 
+def wants_thinking(provider_name: str | None) -> bool:
+    """
+    Extended thinking for the quality-critical passes (plan, depth).
+    API models benefit; local models slow to a crawl and drift off strict JSON.
+    """
+    return (provider_name or settings.default_provider).lower() not in ("ollama", "desktop")
+
+
 def get_provider(
     provider_name: str | None = None,
     model_name: str | None = None,

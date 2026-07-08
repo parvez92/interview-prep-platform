@@ -1,0 +1,16 @@
+{
+  "category": "system_design",
+  "topic": {
+    "title": "Rate limiter — token bucket vs sliding window at scale",
+    "concept": "A rate limiter protects downstreams by rejecting excess requests early; the algorithm choice trades burst tolerance against precision, and the storage choice trades accuracy against latency.",
+    "points": [
+      "Token bucket allows bursts up to bucket size at refill rate r; fixed window suffers 2x boundary bursts; sliding window log is exact but O(requests) memory.",
+      "Sliding window counter (weighted two windows) is the practical middle: ~1.5% error, O(1) memory.",
+      "Distributed: counters in Redis with a Lua script for atomic read-increment-expire — avoids the check-then-set race.",
+      "Reject with 429 + Retry-After header; return X-RateLimit-Remaining so clients can self-throttle.",
+      "Decide the key first: per-user, per-API-key, per-IP (NAT punishes shared IPs) — and what happens when Redis is down (fail-open vs fail-closed)."
+    ],
+    "angle": "'Design a rate limiter for a public API.' Strong answers pick an algorithm WITH a reason, make the distributed counter atomic, and state the fail-open/fail-closed decision explicitly — that last one separates seniors.",
+    "est_minutes": 90
+  }
+}

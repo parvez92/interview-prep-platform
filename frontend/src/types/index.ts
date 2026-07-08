@@ -15,6 +15,10 @@ export interface Phase {
 export interface Week {
   code:   string;
   title:  string;
+  /** narrative pass: one sentence bridging from the previous week */
+  bridge?: string | null;
+  /** narrative pass: tie-in to the candidate's real experience */
+  anchor?: string | null;
   topics: TopicLite[];
 }
 
@@ -30,6 +34,10 @@ export interface TopicLite {
   resources_hint?: string;
   /** plan-assigned category (dsa, system_design, …) — persisted by commitPlan */
   category?: string;
+  /** v2 coarse plan: what this unit covers — commitPlan maps it to topic.angle */
+  scope?: string;
+  /** v2 coarse plan: none|maybe|likely — depth pass may split this unit */
+  split_hint?: string;
 }
 
 export interface TopicDetail extends TopicLite {
@@ -127,10 +135,19 @@ export interface Progress {
 }
 
 export interface TodayItem {
-  kind:       'new' | 'flagged' | 'drill';
+  kind:       'new' | 'flagged' | 'spaced' | 'drill';
   topicSlug:  string;
   label:      string;
   note:       string;
+  estMinutes: number;
+}
+
+/** computed today queue — flags first, then current week, then spaced repetition */
+export interface TodayQueue {
+  items:      TodayItem[];
+  budgetMin:  number;
+  plannedMin: number;
+  velocity:   string;
 }
 
 export interface Usage {

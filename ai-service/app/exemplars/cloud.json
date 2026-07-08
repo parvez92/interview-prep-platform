@@ -1,0 +1,16 @@
+{
+  "category": "cloud",
+  "topic": {
+    "title": "SQS vs SNS vs Kinesis vs EventBridge — choosing the messaging service",
+    "concept": "Four AWS messaging services, each for a different pattern: queue/pull, fan-out push, ordered replayable stream, and rule-routed event bus.",
+    "points": [
+      "SQS: pull-based queue, at-least-once, visibility timeout; FIFO variant gives ordering + exactly-once at 300 msg/s (3000 batched).",
+      "SNS: push fan-out to many subscribers; pair SNS→SQS per consumer for durable fan-out.",
+      "Kinesis: ordered, replayable shards — 1MB/s or 1000 records/s ingest per shard, 2MB/s egress shared unless enhanced fan-out (2MB/s per consumer); retention up to 365 days.",
+      "EventBridge: event bus with content-based routing rules and schema registry — integration glue, not throughput.",
+      "Decision rule: need replay or ordering → Kinesis; work distribution → SQS; broadcast → SNS; cross-service routing → EventBridge."
+    ],
+    "angle": "'Why Kinesis and not SQS here?' — the probe is whether you reason from replay/ordering/consumer-count requirements, not service familiarity. Know the shard math cold.",
+    "est_minutes": 60
+  }
+}

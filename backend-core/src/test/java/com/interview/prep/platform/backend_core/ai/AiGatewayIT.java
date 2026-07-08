@@ -212,6 +212,82 @@ class AiGatewayIT extends IntegrationTestBase {
         assertThat(afterSecond).filteredOn(q -> "manual".equals(q.getSource())).hasSize(1);
     }
 
+    // ── Pipeline v2: narrative + depth (validated, split) + support ──────────
+
+    @Test
+    void seedPipeline_runsNarrativeDepthAndSupport() throws Exception {
+        Topic coarse = createTopic("kafka-internals");
+        coarse.setAngle("partitions, ISR, exactly-once");
+        coarse.setSplitHint("likely");
+        topicRepository.save(coarse);
+        String auth = bearer();
+
+        stubPost("/ai/narrative", Map.of(
+                "result", Map.of(
+                        "phases", List.of(Map.of("blurb", "The engine beneath everything else.")),
+                        "weeks", List.of(Map.of("week_number", 1, "bridge", "With the basics set, Kafka stops being magic.",
+                                "unlocks", "stream processing later", "anchor", "maps to your pipeline work",
+                                "builds_on", List.of()))),
+                "meta", Map.of("model", "m", "cached", false, "tokens", 10, "cost", 0.0)));
+
+        Map<String, Object> card1 = Map.of(
+                "parent", "kafka-internals", "title", "Partitions, replicas & ISR",
+                "concept", "Kafka scales by splitting a topic into partitions; the ISR set defines which replicas may become leader without data loss.",
+                "points", List.of(
+                        "acks=all + min.insync.replicas=2 is the durability floor for RF=3.",
+                        "Leader election only from the ISR unless unclean.leader.election.enable=true.",
+                        "Ordering holds only within a partition — the key selects it via murmur2 hashing.",
+                        "A consumer group caps at 1 consumer per partition — parallelism ceiling = partition count."),
+                "angle", "Why did your consumer see duplicates? Strong answers separate at-least-once delivery from processing idempotency.",
+                "est_minutes", 60);
+        Map<String, Object> card2 = Map.of(
+                "parent", "kafka-internals", "title", "Exactly-once semantics & transactions",
+                "concept", "EOS combines idempotent producers with transactions so consume-process-produce moves atomically between topics.",
+                "points", List.of(
+                        "enable.idempotence=true dedupes per-partition producer retries.",
+                        "transactional.id keys producer fencing across restarts.",
+                        "isolation.level=read_committed hides aborted records.",
+                        "EOS covers Kafka-to-Kafka only — external systems still need idempotency keys."),
+                "angle", "When is exactly-once actually exactly-once? Trade-off: throughput cost vs dedupe logic downstream.",
+                "est_minutes", 45);
+        stubPost("/ai/deep-dive", Map.of(
+                "result", Map.of("topics", List.of(card1, card2)),
+                "meta", Map.of("model", "m", "cached", false, "tokens", 10, "cost", 0.0)));
+
+        stubPost("/ai/seed-plan", Map.of(
+                "result", Map.of("topics", List.of()),
+                "meta", Map.of("model", "m", "cached", false, "tokens", 10, "cost", 0.0)));
+
+        mockMvc.perform(post("/api/ai/seed-plan").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("started"));
+
+        // async pipeline against wiremock finishes in well under 10s
+        String state = "";
+        for (int i = 0; i < 50 && !"done".equals(state) && !"failed".equals(state); i++) {
+            Thread.sleep(200);
+            state = objectMapper.readTree(mockMvc.perform(get("/api/ai/seed-plan/status").header("Authorization", auth))
+                    .andReturn().getResponse().getContentAsString()).path("state").asText();
+        }
+        assertThat(state).isEqualTo("done");
+
+        Topic deepened = topicRepository.findByUserIdAndSlug(testUserId, "kafka-internals").orElseThrow();
+        assertThat(deepened.getConcept()).contains("ISR");
+        assertThat(deepened.getEstMinutes()).isEqualTo(60);
+        assertThat(deepened.getPoints()).contains("min.insync.replicas");
+        assertThat(deepened.isNeedsReview()).isFalse();
+
+        Topic split = topicRepository.findByUserId(testUserId).stream()
+                .filter(t -> "kafka-internals".equals(t.getCoarseParent()))
+                .findFirst().orElseThrow();
+        assertThat(split.getTitle()).contains("Exactly-once");
+
+        assertThat(weekRepository.findById(deepened.getWeek().getId()).orElseThrow().getBridge())
+                .contains("stops being magic");
+        assertThat(phaseRepository.findByUserIdOrderByDisplayOrderAsc(testUserId).get(0).getBlurb())
+                .isEqualTo("The engine beneath everything else.");
+    }
+
     // ── Desktop mode: pasted seed JSON persists through the same path ────────
 
     @Test

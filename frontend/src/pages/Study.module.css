@@ -46,7 +46,26 @@
 
 .weekList { padding: 4px 0 8px; }
 
+.phaseBlurb {
+  padding: 6px 14px 10px 24px;
+  font-size: .8125rem; color: var(--ink-2); font-style: italic;
+  border-bottom: 1px dashed var(--line-2);
+}
+
 .weekGroup { padding: 0 0 4px; }
+
+.weekBridge {
+  padding: 8px 14px 0 24px;
+  font-size: .78rem; color: var(--ink-3); font-style: italic;
+}
+
+.weekAnchor {
+  flex-shrink: 0;
+  font-size: .625rem; font-weight: 600; letter-spacing: .03em;
+  padding: 1px 7px; border-radius: 99px;
+  background: var(--amber-bg, #fff7e0); color: var(--amber, #b7791f);
+  text-transform: none; cursor: help;
+}
 
 .weekHeader {
   display: flex; align-items: center; gap: 6px;

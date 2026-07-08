@@ -80,6 +80,7 @@ function PhaseSection({ phase, open, onToggle }: { phase: Phase; open: boolean; 
 
       {open && (
         <div className={styles.weekList}>
+          {phase.blurb && <p className={styles.phaseBlurb}>{phase.blurb}</p>}
           {phase.weeks.map((week) => <WeekGroup key={week.code} week={week} />)}
         </div>
       )}
@@ -91,9 +92,11 @@ function WeekGroup({ week }: { week: Week }) {
   const [open, setOpen] = useState(true);
   return (
     <div className={styles.weekGroup}>
+      {week.bridge && <p className={styles.weekBridge}>{week.bridge}</p>}
       <button className={styles.weekHeader} onClick={() => setOpen(!open)}>
         {open ? <IconChevronDown size={13} /> : <IconChevronRight size={13} />}
         <span className={styles.weekTitle}>{week.title}</span>
+        {week.anchor && <span className={styles.weekAnchor} title={week.anchor}>your experience</span>}
       </button>
       {open && (
         <ul className={styles.topicList}>

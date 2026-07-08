@@ -19,6 +19,12 @@ public interface TopicRepository extends JpaRepository<Topic, Long> {
     @Query("SELECT t FROM Topic t WHERE t.userId = :userId ORDER BY t.displayOrder ASC")
     List<Topic> findByUserIdOrdered(Long userId);
 
+    @Query("""
+            SELECT t FROM Topic t JOIN FETCH t.week w JOIN FETCH w.phase p
+            WHERE t.userId = :userId
+            ORDER BY p.displayOrder ASC, w.displayOrder ASC, t.displayOrder ASC""")
+    List<Topic> findByUserIdWithWeekOrdered(Long userId);
+
     long countByUserId(Long userId);
 
     long countByUserIdAndStatus(Long userId, String status);

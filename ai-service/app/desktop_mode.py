@@ -116,6 +116,31 @@ async def _build_prompt(path: str, request: Request) -> str:
         system = _env.get_template("seed.md").render(topics=topics)
         return _fmt(system, "Generate study materials for all topics.")
 
+    if path == "/ai/narrative":
+        system = _env.get_template("narrative.md").render(
+            phases=body.get("phases", []),
+            weeks=body.get("weeks", []),
+            highlights=(body.get("highlights") or [])[:12],
+            target_role=body.get("target_role", "Software Engineer"),
+        )
+        return _fmt(system, "Write the narrative JSON for the structure above.")
+
+    if path == "/ai/deep-dive":
+        topics = body.get("topics", [])
+        category = (topics[0].get("category") if topics else "") or "domain"
+        exemplar_file = Path(__file__).parent / "exemplars" / f"{category.lower()}.json"
+        if not exemplar_file.exists():
+            exemplar_file = Path(__file__).parent / "exemplars" / "domain.json"
+        exemplar = json.loads(exemplar_file.read_text())
+        system = _env.get_template("depth.md").render(
+            topics=topics,
+            seniority=body.get("seniority", "mid"),
+            target_role=body.get("target_role", "Software Engineer"),
+            category=category,
+            exemplar_json=json.dumps(exemplar["topic"], separators=(",", ":")),
+        )
+        return _fmt(system, "Write the deep-dive cards for the units above.")
+
     if path.startswith("/ai/mock"):
         history = body.get("history") or []
         user_msg = history[-1].get("content", "Start the mock interview.") if history else "Start the mock interview."

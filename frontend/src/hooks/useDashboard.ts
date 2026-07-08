@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import type { Progress, TodayItem, Usage } from '@/types';
+import type { Progress, TodayQueue, Usage } from '@/types';
 
 export function useProgress() {
   return useQuery({
@@ -13,7 +13,7 @@ export function useProgress() {
 export function useTodayReview() {
   return useQuery({
     queryKey: ['review', 'today'],
-    queryFn: () => api.get<TodayItem[]>('/review/today').then((r) => r.data),
+    queryFn: () => api.get<TodayQueue>('/review/today').then((r) => r.data),
     refetchInterval: 5 * 60_000,
   });
 }

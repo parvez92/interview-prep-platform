@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +30,24 @@ public class Week {
 
     @Column(nullable = false)
     private String title;
+
+    // ── narrative pass (pipeline v2): story over the frozen structure ──────────
+    /** [{"week": 1, "why": "..."}] — earlier weeks this one builds on */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String buildsOn;
+
+    /** what completing this week unlocks later in the plan */
+    @Column(columnDefinition = "text")
+    private String unlocks;
+
+    /** one sentence rendered between week sections in the UI */
+    @Column(columnDefinition = "text")
+    private String bridge;
+
+    /** optional résumé tie-in ("your TIBCO background maps 1:1 to these EIP patterns") */
+    @Column(columnDefinition = "text")
+    private String anchor;
 
     @Column(nullable = false)
     private int displayOrder;

@@ -23,7 +23,9 @@ function normalizePlan(raw: unknown): Phase[] {
     // AI JSON uses weeks_detail; frontend Phase type uses weeks (same array role)
     const rawWeeks = phase.weeks_detail ?? (Array.isArray(phase.weeks) ? phase.weeks : []);
     const weeks: Week[] = (rawWeeks as Record<string, unknown>[]).map((w, wi) => {
-      const topics: TopicLite[] = ((w.topics ?? []) as Record<string, unknown>[]).map((t, ti) => ({
+      // v2 plans emit coarse_topics; older shapes used topics
+      const rawTopics = (w.coarse_topics ?? w.topics ?? []) as Record<string, unknown>[];
+      const topics: TopicLite[] = rawTopics.map((t, ti) => ({
         slug:       slugify(String(t.title ?? 'topic')) + `-${pi}-${wi}-${ti}`,
         code:       `t-${pi}-${wi}-${ti}`,
         title:      String(t.title ?? 'Topic'),
@@ -33,6 +35,8 @@ function normalizePlan(raw: unknown): Phase[] {
         confidence: null,
         resources_hint: typeof t.resources_hint === 'string' && t.resources_hint ? t.resources_hint : undefined,
         category: typeof t.category === 'string' && t.category ? t.category : undefined,
+        scope: typeof t.scope === 'string' && t.scope ? t.scope : undefined,
+        split_hint: typeof t.split_hint === 'string' && t.split_hint ? t.split_hint : undefined,
       }));
       return {
         code:   `w-${pi}-${wi}`,

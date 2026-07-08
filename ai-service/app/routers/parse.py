@@ -10,7 +10,7 @@ from pydantic import BaseModel
 
 from app.cache import cache_get, cache_put, make_cache_key
 from app.deps import DB, ModelName, OllamaUrl, ProviderName, ServiceAuth, UserId
-from app.providers.registry import get_provider
+from app.providers.registry import get_provider, wants_thinking
 from app.rag.embeddings import embed_and_store
 from app.usage import log_usage
 
@@ -179,6 +179,35 @@ def _extract_json(content: str, label: str = "json") -> dict | None:
     return None
 
 
+def _validate_plan_structure(plan: dict, prep_weeks) -> list[str]:
+    """Mechanical checks on the coarse plan (pipeline v2 §1). Free, deterministic."""
+    problems: list[str] = []
+    phases = plan.get("phases")
+    if not isinstance(phases, list) or not phases:
+        return ["no phases"]
+    total_weeks = 0
+    for p in phases:
+        wd = p.get("weeks_detail")
+        if not isinstance(wd, list) or not wd:
+            problems.append(f"phase {p.get('name', '?')!r} has no weeks_detail")
+            continue
+        total_weeks += len(wd)
+        for w in wd:
+            topics = w.get("coarse_topics") or w.get("topics") or []
+            if not 3 <= len(topics) <= 5:
+                problems.append(f"week {w.get('week_number')} has {len(topics)} coarse topics (want 3-5)")
+            for t in topics:
+                if len(t.get("title") or "") >= 90:
+                    problems.append(f"title too long: {(t.get('title') or '')[:40]}…")
+    try:
+        expected = int(prep_weeks) if prep_weeks else None
+    except (TypeError, ValueError):
+        expected = None
+    if expected and total_weeks != expected:
+        problems.append(f"total weeks {total_weeks} != requested {expected}")
+    return problems
+
+
 class ParseResumeRequest(BaseModel):
     raw_text: str
 
@@ -280,7 +309,7 @@ async def generate_plan(
         "profile": profile,
         "additional_context": body.additionalContext or "",
         # bump when plan.md changes materially — cache entries never expire
-        "v": 3,
+        "v": 4,
     })
 
     if not body.regenerate:
@@ -306,7 +335,7 @@ async def generate_plan(
             messages=[{"role": "user", "content": user_msg}],
             system=system,
             max_tokens=32768,
-            use_thinking=False,
+            use_thinking=wants_thinking(provider_name),
         )
         # meter every attempt — a failed parse still consumed tokens
         total_cost += await log_usage(pool, user_id, "plan", result.model,
@@ -315,7 +344,16 @@ async def generate_plan(
 
         plan = _extract_json(result.content, label="plan")
         if plan and isinstance(plan, dict):
-            break
+            problems = _validate_plan_structure(plan, body.targets.get("prepWeeks"))
+            if not problems:
+                break
+            log.warning("plan structure invalid (attempt %d): %s", attempt, problems[:5])
+            if attempt == 2:
+                # don't block the user on soft structure issues — commit-side
+                # truncation and the review screen absorb them
+                break
+            plan = None
+            continue
         log.warning("plan parse_failed (attempt %d): model=%s stop=%s raw_len=%d | head=%r | tail=%r",
                     attempt, result.model, result.stop_reason, len(result.content),
                     result.content[:300], result.content[-300:])

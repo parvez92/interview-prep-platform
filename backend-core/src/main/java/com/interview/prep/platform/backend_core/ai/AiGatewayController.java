@@ -17,6 +17,8 @@ public class AiGatewayController {
 
     private final AiClient aiClient;
     private final AiGatewayService aiGatewayService;
+    private final SeedPipelineService seedPipelineService;
+    private final BudgetGuard budgetGuard;
 
     @PostMapping("/guide")
     public ResponseEntity<Map<String, Object>> guide(
@@ -32,7 +34,17 @@ public class AiGatewayController {
     @PostMapping("/seed-plan")
     public ResponseEntity<Map<String, Object>> seedPlan(@CurrentUser Long userId,
                                                         @RequestParam(value = "provider", required = false) String provider) {
-        return ResponseEntity.ok(aiGatewayService.seedPlan(userId, provider));
+        // desktop = synchronous copy-paste prompt; anything else runs the async pipeline
+        String effective = provider != null ? provider : budgetGuard.resolveProvider(userId);
+        if ("desktop".equalsIgnoreCase(effective)) {
+            return ResponseEntity.ok(aiGatewayService.seedPlan(userId, "desktop"));
+        }
+        return ResponseEntity.ok(seedPipelineService.start(userId));
+    }
+
+    @GetMapping("/seed-plan/status")
+    public ResponseEntity<Map<String, Object>> seedPlanStatus(@CurrentUser Long userId) {
+        return ResponseEntity.ok(seedPipelineService.status(userId));
     }
 
     @PostMapping("/seed-plan/manual")

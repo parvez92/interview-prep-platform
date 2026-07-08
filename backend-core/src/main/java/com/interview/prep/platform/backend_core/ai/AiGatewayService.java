@@ -6,9 +6,13 @@ import com.interview.prep.platform.backend_core.content.ContentService;
 import com.interview.prep.platform.backend_core.content.dto.ExerciseDto;
 import com.interview.prep.platform.backend_core.content.dto.QuestionDto;
 import com.interview.prep.platform.backend_core.content.dto.ResourceDto;
+import com.interview.prep.platform.backend_core.study.Phase;
+import com.interview.prep.platform.backend_core.study.PhaseRepository;
 import com.interview.prep.platform.backend_core.study.StudyService;
 import com.interview.prep.platform.backend_core.study.Topic;
 import com.interview.prep.platform.backend_core.study.TopicRepository;
+import com.interview.prep.platform.backend_core.study.Week;
+import org.springframework.transaction.annotation.Transactional;
 import com.interview.prep.platform.backend_core.study.dto.UpdateTopicDto;
 import com.interview.prep.platform.backend_core.onboarding.ResumeProfile;
 import com.interview.prep.platform.backend_core.onboarding.ResumeProfileRepository;
@@ -20,6 +24,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +40,7 @@ public class AiGatewayService {
     private final StudyService studyService;
     private final UserSettingsRepository userSettingsRepository;
     private final ResumeProfileRepository resumeProfileRepository;
+    private final PhaseRepository phaseRepository;
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateForTab(Long userId, String slug, String tab) {
@@ -74,6 +80,23 @@ public class AiGatewayService {
     @SuppressWarnings("unchecked")
     public Map<String, Object> seedPlan(Long userId, String providerOverride) {
         List<Topic> topics = topicRepository.findByUserIdOrdered(userId);
+        return seedSupport(userId, topics, providerOverride);
+    }
+
+    /** Support pass for a subset (pipeline runs this per week, after depth). */
+    public Map<String, Object> seedSupportForTopics(Long userId, List<Topic> topics,
+                                                    Integer batchSize, String modelOverride) {
+        return seedSupport(userId, topics, null, batchSize, modelOverride);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> seedSupport(Long userId, List<Topic> topics, String providerOverride) {
+        return seedSupport(userId, topics, providerOverride, null, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> seedSupport(Long userId, List<Topic> topics, String providerOverride,
+                                            Integer batchSize, String modelOverride) {
         if (topics.isEmpty()) return Map.of("seeded", 0, "total", 0);
 
         List<Map<String, String>> topicList = topics.stream()
@@ -99,9 +122,10 @@ public class AiGatewayService {
         requestBody.put("topics", topicList);
         requestBody.put("profile", profile);
         requestBody.put("target_role", targetRole.strip());
+        if (batchSize != null) requestBody.put("batch_size", batchSize);
 
         Map<String, Object> response = aiClient.post(userId, "/ai/seed-plan", requestBody, "seed-plan",
-                providerOverride, null);
+                providerOverride, null, modelOverride);
 
         Object result = response.get("result");
         if (!(result instanceof Map<?, ?> resultMap)) return Map.of("seeded", 0, "total", topics.size());
@@ -168,7 +192,8 @@ public class AiGatewayService {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("exercises");
                 if (items == null) return;
                 List<ExerciseDto> dtos = items.stream()
-                        .map(e -> new ExerciseDto(null, str(e, "title"), str(e, "repoUrl"), false, 0))
+                        .map(e -> new ExerciseDto(null, str(e, "title"), str(e, "repoUrl"), false, 0,
+                                e.get("est_minutes") instanceof Number n ? n.intValue() : null))
                         .filter(d -> !d.title().isBlank())
                         .toList();
                 if (!dtos.isEmpty()) contentService.replaceAiExercises(userId, slug, dtos);
@@ -177,7 +202,7 @@ public class AiGatewayService {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("questions");
                 if (items == null) return;
                 List<QuestionDto> dtos = items.stream()
-                        .map(q -> new QuestionDto(null, str(q, "text"), 0))
+                        .map(q -> new QuestionDto(null, str(q, "text"), 0, str(q, "type")))
                         .filter(d -> !d.text().isBlank())
                         .toList();
                 if (!dtos.isEmpty()) contentService.replaceAiQuestions(userId, slug, dtos);
@@ -188,6 +213,92 @@ public class AiGatewayService {
     /** ["Java (expert)", ...] for callers outside this service (e.g. mock interviews). */
     public List<String> profileSkills(Long userId) {
         return skillSummaries(loadProfile(userId));
+    }
+
+    /**
+     * Narrative pass (pipeline v2 §2): one cheap call over the frozen structure —
+     * phase blurbs, week bridges/anchors — persisted onto phase/week rows.
+     */
+    @Transactional
+    public void generateNarrative(Long userId) {
+        generateNarrative(userId, null);
+    }
+
+    @Transactional
+    @SuppressWarnings("unchecked")
+    public void generateNarrative(Long userId, String modelOverride) {
+        List<Phase> phases = phaseRepository.findByUserIdOrderByDisplayOrderAsc(userId);
+        if (phases.isEmpty()) return;
+
+        // flatten weeks with global numbering, preserving phase order
+        List<Week> orderedWeeks = new ArrayList<>();
+        List<Map<String, Object>> weekPayload = new ArrayList<>();
+        List<Map<String, Object>> phasePayload = new ArrayList<>();
+        int weekNo = 0;
+        for (Phase p : phases) {
+            phasePayload.add(Map.of("name", p.getName(), "goal", p.getBlurb() != null ? p.getBlurb() : ""));
+            for (Week w : p.getWeeks()) {
+                weekNo++;
+                orderedWeeks.add(w);
+                weekPayload.add(Map.of("week_number", weekNo, "title", w.getTitle(), "phase", p.getName()));
+            }
+        }
+
+        List<String> highlights = new ArrayList<>();
+        if (loadProfile(userId).get("experiences") instanceof List<?> exps) {
+            for (Object e : exps) {
+                if (e instanceof Map<?, ?> m && m.get("highlights") instanceof List<?> hs) {
+                    hs.forEach(h -> highlights.add(String.valueOf(h)));
+                }
+            }
+        }
+
+        UserSettings us = userSettingsRepository.findByUserId(userId).orElse(null);
+        Map<String, Object> body = new HashMap<>();
+        body.put("phases", phasePayload);
+        body.put("weeks", weekPayload);
+        body.put("highlights", highlights);
+        body.put("target_role", us != null && us.getTargetRole() != null ? us.getTargetRole() : "Software Engineer");
+
+        Map<String, Object> response = aiClient.post(userId, "/ai/narrative", body, "narrative",
+                null, null, modelOverride);
+        if (response == null || !(response.get("result") instanceof Map<?, ?> result)) return;
+
+        if (result.get("phases") instanceof List<?> blurbs) {
+            for (int i = 0; i < phases.size() && i < blurbs.size(); i++) {
+                if (blurbs.get(i) instanceof Map<?, ?> m && m.get("blurb") instanceof String b && !b.isBlank()) {
+                    phases.get(i).setBlurb(b);
+                }
+            }
+            phaseRepository.saveAll(phases);
+        }
+
+        if (result.get("weeks") instanceof List<?> weeks) {
+            for (Object o : weeks) {
+                if (!(o instanceof Map<?, ?> wm) || !(wm.get("week_number") instanceof Number n)) continue;
+                int idx = n.intValue() - 1;
+                if (idx < 0 || idx >= orderedWeeks.size()) continue;
+                Week week = orderedWeeks.get(idx);
+                if (wm.get("bridge") instanceof String bridge && !bridge.isBlank()) week.setBridge(bridge);
+                if (wm.get("unlocks") instanceof String unlocks && !unlocks.isBlank()) week.setUnlocks(unlocks);
+                if (wm.get("anchor") instanceof String anchor && !anchor.isBlank()) week.setAnchor(anchor);
+                if (wm.get("builds_on") instanceof List<?> buildsOn) {
+                    // keep only references to earlier weeks
+                    List<Map<String, Object>> valid = new ArrayList<>();
+                    for (Object bo : buildsOn) {
+                        if (bo instanceof Map<?, ?> bm && bm.get("week") instanceof Number wn
+                                && wn.intValue() >= 1 && wn.intValue() < n.intValue()) {
+                            Object why = bm.get("why");
+                            valid.add(Map.of("week", wn.intValue(),
+                                    "why", why != null ? String.valueOf(why) : ""));
+                        }
+                    }
+                    try {
+                        week.setBuildsOn(new ObjectMapper().writeValueAsString(valid));
+                    } catch (Exception ignored) { /* narrative extras are best-effort */ }
+                }
+            }
+        }
     }
 
     /** Load the parsed resume profile, unwrapping the {"result": {...}} envelope if present. */

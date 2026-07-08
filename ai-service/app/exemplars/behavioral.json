@@ -1,0 +1,16 @@
+{
+  "category": "behavioral",
+  "topic": {
+    "title": "STAR story anatomy — conflict-with-a-colleague story",
+    "concept": "A STAR answer front-loads just enough context, spends most of the time on YOUR actions, and lands on a quantified result plus a lesson — 90 seconds total, not five minutes.",
+    "points": [
+      "Budget: Situation+Task ~20% (2-3 sentences), Action ~60% with 'I' not 'we', Result ~20% quantified.",
+      "Quantify the result even approximately: 'cut deploy failures from weekly to ~1/quarter' beats 'it improved'.",
+      "Conflict stories need a named disagreement, the resolution mechanism (data, prototype, escalation criteria), and what changed in YOUR behavior after.",
+      "Prepare 6-8 stories mapped to competencies (conflict, failure, ambiguity, leadership, deadline) — each retellable in 3 depths: 30s, 90s, 5min.",
+      "Follow-up-proof: interviewers ask 'what would you do differently?' — have a real answer, not 'nothing'."
+    ],
+    "angle": "'Tell me about a disagreement with a teammate.' Weak answers blame or stay vague; strong answers show a decision mechanism (we agreed to benchmark both) and a measured outcome.",
+    "est_minutes": 45
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "category": "dsa",
+  "topic": {
+    "title": "Graphs — BFS & DFS traversal patterns",
+    "concept": "Graphs are adjacency lists or matrices; BFS finds shortest paths in unweighted graphs, DFS answers connectivity and cycle questions. Most grid problems are graphs in disguise.",
+    "points": [
+      "Both traversals are O(V+E) with an adjacency list; the matrix costs O(V^2).",
+      "BFS layer-by-layer with a queue gives shortest unweighted paths; track visited BEFORE enqueue to avoid duplicates.",
+      "Cycle detection: DFS with three colors (white/gray/black) for directed; union-find for undirected.",
+      "Topological sort = DFS post-order reversed, or Kahn's algorithm with in-degrees (detects cycles when output < V).",
+      "Bar problems: Number of Islands, Clone Graph, Course Schedule, Rotting Oranges (multi-source BFS)."
+    ],
+    "angle": "'Why BFS here and not DFS?' — interviewers probe whether you map problem constraints (shortest path? all paths? cycle?) to the traversal, not whether you memorized the code.",
+    "est_minutes": 90
+  }
+}

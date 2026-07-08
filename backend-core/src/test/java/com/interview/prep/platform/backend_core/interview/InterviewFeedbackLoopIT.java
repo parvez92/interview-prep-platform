@@ -177,7 +177,7 @@ class InterviewFeedbackLoopIT extends IntegrationTestBase {
 
         mockMvc.perform(get("/api/review/today").header("Authorization", auth))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.kind=='flagged' && @.topicSlug=='arrays')]").exists());
+                .andExpect(jsonPath("$.items[?(@.kind=='flagged' && @.topicSlug=='arrays')]").exists());
     }
 
     // ── Rating raised → flag resolved ────────────────────────────────────────
@@ -218,7 +218,7 @@ class InterviewFeedbackLoopIT extends IntegrationTestBase {
         // review/today must no longer have the flagged item
         mockMvc.perform(get("/api/review/today").header("Authorization", auth))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.kind=='flagged' && @.topicSlug=='arrays')]").doesNotExist());
+                .andExpect(jsonPath("$.items[?(@.kind=='flagged' && @.topicSlug=='arrays')]").doesNotExist());
     }
 
     // ── progress.flaggedCount ────────────────────────────────────────────────

@@ -1,0 +1,16 @@
+{
+  "category": "language",
+  "topic": {
+    "title": "Garbage collectors — G1, ZGC, Shenandoah",
+    "concept": "GC reclaims unreachable objects; the core trade-off is throughput vs latency, and collector choice follows the latency SLO and heap size.",
+    "points": [
+      "G1 (default since Java 9): region-based, targets pause via -XX:MaxGCPauseMillis (default 200ms).",
+      "ZGC: sub-ms pauses regardless of heap size (colored pointers + load barriers) — latency-sensitive APIs.",
+      "Shenandoah: concurrent compaction like ZGC, available in OpenJDK builds where ZGC isn't.",
+      "Selection rule: P99 < 10ms or 100GB+ heap → ZGC; balanced throughput → G1.",
+      "Know the OOM flavors: heap space, Metaspace, GC overhead limit exceeded, direct buffer memory."
+    ],
+    "angle": "'50ms P99 SLO, 16GB heap — which GC and why?' Strong answers name ZGC, cite pause-time mechanics, and mention what they'd measure (-Xlog:gc*, allocation rate) before switching.",
+    "est_minutes": 60
+  }
+}

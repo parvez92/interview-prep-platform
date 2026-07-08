@@ -1,0 +1,16 @@
+{
+  "category": "framework",
+  "topic": {
+    "title": "@Transactional internals — proxies, propagation, rollback rules",
+    "concept": "Spring wraps the bean in a proxy that opens/commits the transaction around the method; the annotation does nothing when the call never crosses the proxy boundary.",
+    "points": [
+      "Self-invocation bypasses the proxy — a @Transactional method calling another in the same class runs in the caller's transaction (or none).",
+      "Default rollback: unchecked exceptions only; checked exceptions commit unless rollbackFor is set.",
+      "REQUIRES_NEW suspends the outer transaction — a failure inside it does not roll back the caller.",
+      "JDK dynamic proxies need an interface; CGLIB subclasses the bean — final methods silently lose the aspect.",
+      "readOnly=true is a hint: Hibernate skips dirty checking; some drivers route to replicas."
+    ],
+    "angle": "'Why did my @Transactional method not roll back?' — the classic trap. Strong answers check self-invocation, checked-exception defaults, and whether the proxy was even created.",
+    "est_minutes": 75
+  }
+}

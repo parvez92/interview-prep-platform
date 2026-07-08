@@ -41,7 +41,8 @@ describe('Home dashboard', () => {
   });
 
   it("shows 'All caught up' when today list is empty", async () => {
-    server.use(http.get('/api/review/today', () => HttpResponse.json([])));
+    server.use(http.get('/api/review/today', () => HttpResponse.json(
+      { items: [], budgetMin: 100, plannedMin: 0, velocity: 'on pace' })));
     renderWithProviders(<Home />);
 
     await waitFor(() => {

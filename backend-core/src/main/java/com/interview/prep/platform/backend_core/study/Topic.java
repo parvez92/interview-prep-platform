@@ -61,6 +61,20 @@ public class Topic {
     private Integer confidence;
     private Instant lastReviewedAt;
 
+    // ── pipeline v2 ─────────────────────────────────────────────────────────────
+    /** estimated study effort, minutes — drives the today queue's budget fill */
+    private Integer estMinutes;
+
+    /** depth generation failed validation twice — UI offers manual regen */
+    @Column(nullable = false)
+    private boolean needsReview = false;
+
+    /** slug of the coarse plan topic this one was split from by the depth pass */
+    private String coarseParent;
+
+    /** none|maybe|likely — whether the depth pass should consider splitting this coarse topic */
+    private String splitHint;
+
     @Column(nullable = false)
     private int displayOrder;
 }

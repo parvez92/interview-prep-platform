@@ -5,5 +5,7 @@ import java.util.List;
 public record WeekSummaryDto(
         String code,
         String title,
+        String bridge,
+        String anchor,
         List<TopicSummaryDto> topics
 ) {}
