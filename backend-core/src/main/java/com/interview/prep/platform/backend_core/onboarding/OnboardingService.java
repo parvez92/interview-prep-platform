@@ -186,6 +186,9 @@ public class OnboardingService {
         if (additionalContext != null && !additionalContext.isBlank()) {
             body.put("additionalContext", additionalContext.strip());
         }
+        if (requestBody != null && Boolean.TRUE.equals(requestBody.get("regenerate"))) {
+            body.put("regenerate", true);
+        }
 
         Map<String, Object> response = aiClient.post(userId, "/ai/generate-plan", body, "plan-generate");
         Object result = response.get("result");

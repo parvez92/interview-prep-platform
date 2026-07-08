@@ -188,6 +188,7 @@ class GeneratePlanRequest(BaseModel):
     profileJson: str | None = None
     targets: dict = {}
     additionalContext: str | None = None
+    regenerate: bool = False  # skip the cache and produce a fresh plan
 
     def resolved_profile(self) -> dict:
         if self.profile:
@@ -282,9 +283,10 @@ async def generate_plan(
         "v": 2,
     })
 
-    cached = await cache_get(pool, user_id, cache_key)
-    if cached:
-        return {"result": cached["content"], "meta": {"model": cached["model"], "cached": True, "tokens": 0, "cost": 0.0}}
+    if not body.regenerate:
+        cached = await cache_get(pool, user_id, cache_key)
+        if cached:
+            return {"result": cached["content"], "meta": {"model": cached["model"], "cached": True, "tokens": 0, "cost": 0.0}}
 
     system = _env.get_template("plan.md").render(
         profile=profile,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   IconUser, IconRobot, IconDownload, IconDeviceLaptop,
-  IconCloudUpload, IconCheck, IconServer,
+  IconCloudUpload, IconCheck, IconServer, IconRefresh,
 } from '@tabler/icons-react';
 import { useMe } from '@/hooks/useMe';
 import api from '@/lib/api';
@@ -195,10 +195,21 @@ export function Settings() {
       {/* Resume */}
       <Section icon={<IconCloudUpload size={16} />} title="Resume">
         <p style={{ fontSize: '.875rem', color: 'var(--ink-2)', marginBottom: 8 }}>
-          Re-upload to refresh your RAG embeddings and parsed profile.
+          Re-upload to refresh your RAG embeddings and parsed profile, then build a new plan from scratch.
         </p>
         <button className="btn btn-ghost" onClick={() => window.location.href = '/onboarding'}>
           Re-upload résumé
+        </button>
+      </Section>
+
+      {/* Study plan */}
+      <Section icon={<IconRefresh size={16} />} title="Study plan">
+        <p style={{ fontSize: '.875rem', color: 'var(--ink-2)', marginBottom: 8 }}>
+          Generate a fresh plan from your saved profile — no re-upload needed. You review it before
+          committing; <strong>committing replaces your current topics and their progress</strong>.
+        </p>
+        <button className="btn btn-ghost" onClick={() => window.location.href = '/onboarding?start=targets'}>
+          Regenerate plan
         </button>
       </Section>
 

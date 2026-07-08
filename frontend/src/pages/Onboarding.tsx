@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   IconUpload, IconCheck, IconTarget, IconClipboardList,
   IconChevronRight, IconChevronLeft, IconSparkles, IconX,
-  IconBolt, IconDeviceDesktop, IconServer, IconPlus,
+  IconBolt, IconDeviceDesktop, IconServer, IconPlus, IconRefresh,
 } from '@tabler/icons-react';
 import api from '@/lib/api';
 import { queryClient } from '@/lib/queryClient';
@@ -122,13 +122,20 @@ function readSaved(): {
 }
 
 export function Onboarding() {
-  const [step,    setStep]    = useState<number>(() => readSaved()?.step ?? 0);
+  const [step,    setStep]    = useState<number>(() => {
+    // Settings → "Regenerate plan" deep-links past upload/confirm; the server
+    // already holds the confirmed profile, which is all plan generation needs.
+    if (new URLSearchParams(window.location.search).get('start') === 'targets') return 2;
+    return readSaved()?.step ?? 0;
+  });
   const [profile, setProfile] = useState<ResumeProfile | null>(() => readSaved()?.profile ?? null);
   const [targets, setTargets] = useState<Partial<OnboardingTargets>>(() => readSaved()?.targets ?? {});
   const [plan,    setPlan]    = useState<Phase[] | null>(() => readSaved()?.plan ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [desktopPrompt, setDesktopPrompt] = useState<string | null>(null);
+  // bumped per generation so PlanStep remounts with the fresh plan (it holds local edit state)
+  const [planVersion, setPlanVersion] = useState(0);
   const nav = useNavigate();
 
   useEffect(() => {
@@ -136,6 +143,25 @@ export function Onboarding() {
       sessionStorage.setItem(ONBOARDING_KEY, JSON.stringify({ step, profile, targets, plan }));
     } catch { /* storage full or disabled — silently skip */ }
   }, [step, profile, targets, plan]);
+
+  const generatePlan = async (regenerate: boolean) => {
+    setLoading(true); setError(null);
+    try {
+      const res = await api.post<{ phases?: Phase[]; desktop_mode?: boolean; desktop_prompt?: string }>(
+        '/onboarding/plan', { ...targets, regenerate });
+      if (res.data.desktop_mode && res.data.desktop_prompt) {
+        setDesktopPrompt(res.data.desktop_prompt);
+      } else {
+        const phases = normalizePlan(res.data.phases ?? []);
+        if (phases.length === 0) { setError('Plan came back empty — try again.'); return; }
+        setPlan(phases);
+        setPlanVersion(v => v + 1);
+        setStep(3);
+      }
+    } catch (e: unknown) {
+      setError(friendlyError(e));
+    } finally { setLoading(false); }
+  };
 
   return (
     <div className={styles.page}>
@@ -216,22 +242,8 @@ export function Onboarding() {
           <TargetsStep
             targets={targets}
             onChange={setTargets}
-            onBack={() => setStep(1)}
-            onNext={async () => {
-              setLoading(true); setError(null);
-              try {
-                const res = await api.post<{ phases?: Phase[]; desktop_mode?: boolean; desktop_prompt?: string }>('/onboarding/plan', targets);
-                if (res.data.desktop_mode && res.data.desktop_prompt) {
-                  setDesktopPrompt(res.data.desktop_prompt);
-                } else {
-                  const phases = normalizePlan(res.data.phases ?? []);
-                  if (phases.length === 0) { setError('Plan came back empty — try again.'); return; }
-                  setPlan(phases); setStep(3);
-                }
-              } catch (e: unknown) {
-                setError(friendlyError(e));
-              } finally { setLoading(false); }
-            }}
+            onBack={() => setStep(profile ? 1 : 0)}
+            onNext={() => generatePlan(false)}
             loading={loading}
           />
         )}
@@ -254,7 +266,9 @@ export function Onboarding() {
         )}
         {step === 3 && plan && (
           <PlanStep
+            key={planVersion}
             plan={plan}
+            onRegenerate={() => generatePlan(true)}
             onBack={() => setStep(2)}
             onCommit={async (editedPlan) => {
               setLoading(true);
@@ -735,11 +749,12 @@ function TargetsStep({ targets, onChange, onBack, onNext, loading }: {
 }
 
 /* ── Step 3: Plan preview ─────────────────────────────────────────────────── */
-function PlanStep({ plan: initialPlan, onBack, onCommit, loading }: {
-  plan:     Phase[];
-  onBack:   () => void;
-  onCommit: (plan: Phase[]) => void;
-  loading:  boolean;
+function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }: {
+  plan:         Phase[];
+  onBack:       () => void;
+  onCommit:     (plan: Phase[]) => void;
+  onRegenerate: () => void;
+  loading:      boolean;
 }) {
   const [plan, setPlan] = useState<Phase[]>(initialPlan);
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -787,11 +802,24 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, loading }: {
 
   return (
     <div className={styles.stepContent}>
-      <h2 className={styles.stepTitle}>Review your plan</h2>
-      <p className={styles.stepSub}>
-        {plan.length} phases · {totalWeeks} weeks · {totalTopics} topics —
-        remove unwanted topics or add your own before committing.
-      </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+        <div>
+          <h2 className={styles.stepTitle}>Review your plan</h2>
+          <p className={styles.stepSub}>
+            {plan.length} phases · {totalWeeks} weeks · {totalTopics} topics —
+            remove unwanted topics or add your own before committing.
+          </p>
+        </div>
+        <button
+          className="btn btn-sm btn-ghost"
+          onClick={onRegenerate}
+          disabled={loading}
+          title="Discard this plan and generate a fresh one from your profile"
+          style={{ flexShrink: 0, marginTop: 4 }}
+        >
+          {loading ? <Spinner size={13} /> : <IconRefresh size={13} />} Regenerate
+        </button>
+      </div>
 
       <div className={styles.planList}>
         {plan.map((phase, pi) => (
