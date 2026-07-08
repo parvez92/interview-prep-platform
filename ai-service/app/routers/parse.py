@@ -121,11 +121,33 @@ def _extract_json(content: str, label: str = "json") -> dict | None:
             log.warning("%s balanced-slice parse failed at pos %d: %s | around: %r",
                         label, e.pos, e.msg, _sanitize(text[:last_balanced])[max(0, e.pos-40):e.pos+40])
 
-    # Last resort: stack-based truncation repair
-    # Walk again tracking an ordered stack so closing sequence is correct (e.g. ]}]} not ]]]}}})
+    # Last resort: truncation repair.
+    # A cut-off generation usually ends mid-value (dangling '"key":', half-written
+    # string, trailing comma) — just appending closers can't fix those. Cut back to
+    # the end of the last COMPLETE value (last close bracket outside a string),
+    # dropping the incomplete tail, then close whatever is still open, in order.
+    last_close = -1
+    in_str2, escape2 = False, False
+    for i, ch in enumerate(text):
+        if escape2:
+            escape2 = False
+            continue
+        if ch == "\\" and in_str2:
+            escape2 = True
+            continue
+        if ch == '"':
+            in_str2 = not in_str2
+            continue
+        if in_str2:
+            continue
+        if ch in "}]":
+            last_close = i
+
+    base = text[:last_close + 1] if last_close != -1 else text.rstrip().rstrip(",")
+
     stack: list[str] = []
     in_str2, escape2 = False, False
-    for ch in text:
+    for ch in base:
         if escape2:
             escape2 = False
             continue
@@ -144,14 +166,11 @@ def _extract_json(content: str, label: str = "json") -> dict | None:
         elif ch in "}]" and stack:
             stack.pop()
 
-    if in_str2:
-        stack_suffix = '"' + "".join(reversed(stack))
-    else:
-        stack_suffix = "".join(reversed(stack))
-
-    if stack_suffix:
-        log.warning("%s JSON was truncated — appending %r", label, stack_suffix)
-        for candidate in (text + stack_suffix, _sanitize(text) + stack_suffix):
+    stack_suffix = ('"' if in_str2 else "") + "".join(reversed(stack))
+    if stack_suffix or last_close != len(text) - 1:
+        log.warning("%s JSON was truncated — dropped %d tail chars, appending %r",
+                    label, len(text) - len(base), stack_suffix)
+        for candidate in (base + stack_suffix, _sanitize(base) + stack_suffix):
             try:
                 return json.loads(candidate)
             except json.JSONDecodeError:
@@ -259,6 +278,8 @@ async def generate_plan(
         "targets": sorted(body.targets.items()),
         "profile": profile,
         "additional_context": body.additionalContext or "",
+        # bump when plan.md changes materially — cache entries never expire
+        "v": 2,
     })
 
     cached = await cache_get(pool, user_id, cache_key)
@@ -273,27 +294,38 @@ async def generate_plan(
     user_msg = "Generate the study plan JSON."
     if body.additionalContext:
         user_msg += f"\n\nAdditional instructions from the candidate: {body.additionalContext}"
-    # 32768 triggers num_predict=-1 in OllamaProvider (unlimited); gives Anthropic enough room too.
-    result = await provider.complete(
-        messages=[{"role": "user", "content": user_msg}],
-        system=system,
-        max_tokens=32768,
-        use_thinking=False,
-    )
+    plan = None
+    result = None
+    total_tokens = 0
+    total_cost = 0.0
+    for attempt in (1, 2):
+        # 32768 triggers num_predict=-1 in OllamaProvider (unlimited); gives Anthropic enough room too.
+        result = await provider.complete(
+            messages=[{"role": "user", "content": user_msg}],
+            system=system,
+            max_tokens=32768,
+            use_thinking=False,
+        )
+        # meter every attempt — a failed parse still consumed tokens
+        total_cost += await log_usage(pool, user_id, "plan", result.model,
+                                      result.input_tokens, result.output_tokens, provider_name or "anthropic")
+        total_tokens += result.input_tokens + result.output_tokens
 
-    plan = _extract_json(result.content, label="plan")
+        plan = _extract_json(result.content, label="plan")
+        if plan and isinstance(plan, dict):
+            break
+        log.warning("plan parse_failed (attempt %d): model=%s stop=%s raw_len=%d | head=%r | tail=%r",
+                    attempt, result.model, result.stop_reason, len(result.content),
+                    result.content[:300], result.content[-300:])
+
     if not plan or not isinstance(plan, dict):
-        content = result.content
-        log.warning("plan parse_failed: model=%s raw_len=%d | head=%r | tail=%r",
-                    result.model, len(content), content[:400], content[-400:])
         raise RuntimeError("parse_failed: The AI returned a plan that couldn't be read as JSON. Please try again.")
 
-    cost = await log_usage(pool, user_id, "plan", result.model, result.input_tokens, result.output_tokens, provider_name or "anthropic")
     await cache_put(pool, user_id, cache_key, "plan", plan, result.model)
 
     return {
         "result": plan,
-        "meta": {"model": result.model, "cached": False, "tokens": result.input_tokens + result.output_tokens, "cost": cost},
+        "meta": {"model": result.model, "cached": False, "tokens": total_tokens, "cost": total_cost},
     }
 
 

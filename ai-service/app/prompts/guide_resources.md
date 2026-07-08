@@ -10,16 +10,16 @@ Return ONLY valid JSON:
 {"resources":[{"label":"Site – specific page or section title","url":"https://..."}]}
 
 Rules:
-- Generate 4-8 high-quality resources genuinely useful for THIS topic.
-- Pick sources appropriate to the technology/concept — do NOT default to LeetCode/NeetCode for every topic:
-  - DSA/algorithms → LeetCode, NeetCode, VisuAlgo, CP-algorithms.com, competitive programming sites
-  - Framework/library (Spring, React, Django…) → official docs, Baeldung, dedicated blogs, GitHub examples
-  - System design → ByteByteGo, System Design Primer, DDIA, high-scalability.com
-  - Cloud platforms → official docs, vendor learning portals, A Cloud Guru, Linux Foundation courses
-  - Databases → official docs, Use The Index Luke, pgexercises, specific DB tutorials
-  - ML/AI → fast.ai, PyTorch/TensorFlow official, Papers With Code, Hugging Face, Kaggle
-  - Behavioural → STAR method guides, company-specific interview blogs, Glassdoor insights
-- Every URL must be real, publicly accessible, and canonical (no shorteners).
+- Generate 4-8 resources that are genuinely the BEST available for THIS topic — not merely the most famous site in the category.
+- Quality order: (1) official docs/reference for the exact feature, (2) canonical deep-dives by the technology's creators or recognized experts — books, engineering blogs, conference talks, (3) high-quality interactive practice. Prefer a lesser-known resource over a popular one whenever it is genuinely better for this exact topic.
+- Reliable staples per category — treat as EXAMPLES you can draw on, never as a required list:
+  - DSA/algorithms → LeetCode, NeetCode, VisuAlgo, CP-algorithms.com
+  - Framework/library → official docs, maintainer blogs, Baeldung, annotated GitHub examples
+  - System design → ByteByteGo, System Design Primer, DDIA, real engineering blogs (Netflix, Uber, Stripe…)
+  - Cloud platforms → official docs, vendor skill builders, Linux Foundation courses
+  - Databases → official docs, Use The Index Luke, pgexercises
+  - ML/AI → fast.ai, official framework docs, Papers With Code, Hugging Face
+  - Behavioural → STAR method guides, company-specific interview blogs
+- Only include URLs you are confident actually exist — links are verified after generation and dead ones are dropped, so a hallucinated URL just wastes a slot.
 - Labels must be specific: include the site name and the exact topic/section (e.g. "Spring Security docs – OAuth2 Login").
-- Order from foundational to advanced.
-- No duplicates.
+- Order from foundational to advanced. No duplicates, no shorteners.

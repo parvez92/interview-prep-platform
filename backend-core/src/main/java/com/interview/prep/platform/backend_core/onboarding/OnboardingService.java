@@ -253,6 +253,7 @@ public class OnboardingService {
                     int topicOrd = 0;
                     for (Map<String, Object> td : topicsData) {
                         String title = str(td, "title", "Topic");
+                        if (title.length() > 255) title = title.substring(0, 255);
                         Topic topic = new Topic();
                         topic.setUserId(userId);
                         topic.setWeek(week);
@@ -369,6 +370,8 @@ public class OnboardingService {
     private String uniqueSlug(Long userId, String title) {
         String base = toSlug(title);
         if (base.isBlank()) base = "topic";
+        // leave room for the "-N" uniqueness suffix within the 255-char column
+        if (base.length() > 240) base = base.substring(0, 240);
         String slug = base;
         int i = 2;
         while (topicRepository.existsByUserIdAndSlug(userId, slug)) {

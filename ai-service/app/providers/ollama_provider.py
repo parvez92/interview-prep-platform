@@ -52,9 +52,15 @@ class OllamaProvider(LLMProvider):
                     "messages": msgs,
                     "stream": False,
                     "think": use_thinking,
-                    # -1 = unlimited (generate until EOS). Use it when caller passes a
-                    # sentinel value or a very large limit — avoids mid-JSON truncation.
-                    "options": {"num_predict": -1 if max_tokens <= 0 or max_tokens >= 16384 else max_tokens},
+                    "options": {
+                        # -1 = unlimited (generate until EOS). Use it when caller passes a
+                        # sentinel value or a very large limit — avoids mid-JSON truncation.
+                        "num_predict": -1 if max_tokens <= 0 or max_tokens >= 16384 else max_tokens,
+                        # Ollama's default context (~4k) silently truncates generation once
+                        # prompt + output fill it — num_predict=-1 does not protect against
+                        # that. Long JSON plans need the headroom.
+                        "num_ctx": 16384,
+                    },
                 },
             )
             if resp.status_code == 404:
@@ -72,7 +78,8 @@ class OllamaProvider(LLMProvider):
             input_tokens=data.get("prompt_eval_count", 0),
             output_tokens=data.get("eval_count", 0),
             model=data.get("model", self._model),
-            stop_reason="stop",
+            # "length" = truncated — callers use this to explain parse failures
+            stop_reason=data.get("done_reason", "stop"),
         )
 
     async def tool_call(

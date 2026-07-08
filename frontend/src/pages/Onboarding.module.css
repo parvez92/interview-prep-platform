@@ -70,7 +70,9 @@
 .formGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
 /* Plan */
-.planList { display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 4px; }
+.planList { display: flex; flex-direction: column; gap: 10px; max-height: 65vh; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+/* topic titles are long and specific — wrap chips instead of clipping them */
+.planList :global(.badge) { white-space: normal; text-align: left; line-height: 1.5; }
 .planPhase {
   border: 1px solid var(--line); border-radius: var(--radius);
   overflow: hidden;

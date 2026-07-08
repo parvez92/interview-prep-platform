@@ -14,18 +14,18 @@ Use each topic's category to pick the right source/exercise style, and its focus
 
 ## What to generate per topic
 
-**resources** — 4-8 curated links that are genuinely the best learning material for that specific topic.
-Pick resources appropriate to the technology — do NOT default to LeetCode/NeetCode for every topic.
-Good source matching:
+**resources** — 4-8 curated links that are genuinely the BEST learning material for that specific topic — not merely the most famous site in the category.
+Quality order: (1) official docs/reference for the exact feature, (2) canonical deep-dives by the technology's creators or recognized experts (books, engineering blogs, talks), (3) high-quality interactive practice. Prefer a lesser-known resource over a popular one whenever it is genuinely better.
+Reliable staples per category — EXAMPLES to draw on, never a required list:
 - DSA/algorithms → LeetCode, NeetCode, VisuAlgo, CP-algorithms.com
 - Spring/Java → Spring reference docs, Baeldung, spring.io guides
-- System design → ByteByteGo, System Design Primer (GitHub), DDIA book summary
+- System design → ByteByteGo, System Design Primer (GitHub), DDIA, real engineering blogs
 - Kafka/messaging → Confluent docs, Kafka Definitive Guide (free O'Reilly)
 - React/frontend → React official docs, Kent C. Dodds blog, Josh Comeau
 - ML/AI → fast.ai, PyTorch tutorials, Papers With Code, Hugging Face docs
-- Cloud (AWS/GCP/Azure) → official docs, A Cloud Guru, Adrian Cantrill
+- Cloud (AWS/GCP/Azure) → official docs, vendor skill builders, Adrian Cantrill
 - Databases → official docs, Use The Index Luke (indexes), pgexercises.com
-Every URL must be real and publicly accessible. Label must include site name and topic (e.g. "Baeldung – Spring Security JWT").
+Only include URLs you are confident actually exist — links are verified after generation and dead ones are dropped, so a hallucinated URL just wastes a slot. Label must include site name and topic (e.g. "Baeldung – Spring Security JWT").
 
 **exercises** — 4-8 concrete, actionable practice tasks ordered easy → hard.
 - Algorithm topics: specific LeetCode problems with real problem URLs

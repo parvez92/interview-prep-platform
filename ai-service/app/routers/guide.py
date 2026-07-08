@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app.cache import cache_get, cache_put, make_cache_key
 from app.deps import DB, ModelName, ProviderName, ServiceAuth, UserId
+from app.linkcheck import filter_live_urls
 from app.providers.registry import get_provider
 from app.rag.retriever import retrieve
 from app.routers.parse import _extract_json
@@ -83,6 +84,10 @@ async def guide(
         content = _extract_json(result.content, label=f"guide-{body.tab}") or {}
     else:
         content = result.content
+
+    # verify recommended links exist before they're stored — dead links are worse than fewer links
+    if body.tab == "resources" and isinstance(content, dict) and isinstance(content.get("resources"), list):
+        content["resources"] = await filter_live_urls(content["resources"])
 
     cost = await log_usage(pool, user_id, f"guide-{body.tab}", result.model, result.input_tokens, result.output_tokens)
     await cache_put(pool, user_id, cache_key, f"guide-{body.tab}", content, result.model)

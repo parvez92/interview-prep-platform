@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from app.cache import cache_get, cache_put, make_cache_key
 from app.deps import DB, ModelName, OllamaUrl, ProviderName, ServiceAuth, UserId
+from app.linkcheck import filter_live_urls
 from app.providers.registry import get_provider
 from app.routers.parse import _extract_json
 from app.usage import log_usage
@@ -76,6 +77,11 @@ async def seed_plan(
             log.warning("seed batch parse_failed: model=%s slugs=%s raw_len=%d preview=%r",
                         result.model, [t["slug"] for t in batch], len(result.content), result.content[:300])
             return [], tokens, cost, False, result.model
+
+        # verify recommended links exist before caching — dead links are worse than fewer links
+        for topic in content["topics"]:
+            if isinstance(topic.get("resources"), list):
+                topic["resources"] = await filter_live_urls(topic["resources"])
 
         await cache_put(pool, user_id, cache_key, "seed", content, result.model)
         return content["topics"], tokens, cost, False, result.model
