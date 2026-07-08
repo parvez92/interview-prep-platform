@@ -31,6 +31,23 @@ public class FeedbackLoopService {
         }
     }
 
+    /** Called when a mock interview session completes with a final score. */
+    @Transactional
+    public void handleMockScore(Long userId, Long topicId, int score) {
+        if (topicId == null) return;
+        if (score <= LOW_RATING_THRESHOLD) {
+            ReviewFlag flag = new ReviewFlag();
+            flag.setUserId(userId);
+            flag.setTopicId(topicId);
+            flag.setSource("mock");
+            flag.setReason(String.format("scored %d/5 in mock interview", score));
+            reviewFlagRepository.save(flag);
+            lowerConfidence(topicId);
+        } else {
+            resolveFlags(userId, topicId);
+        }
+    }
+
     /** Called when a question is deleted — re-evaluate its flag. */
     @Transactional
     public void onQuestionRemoved(InterviewQuestion question) {

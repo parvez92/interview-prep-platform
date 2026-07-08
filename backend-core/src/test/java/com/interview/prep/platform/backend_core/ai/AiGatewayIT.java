@@ -6,6 +6,7 @@ import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.interview.prep.platform.backend_core.IntegrationTestBase;
 import com.interview.prep.platform.backend_core.content.Question;
 import com.interview.prep.platform.backend_core.content.QuestionRepository;
+import com.interview.prep.platform.backend_core.interview.ReviewFlagRepository;
 import com.interview.prep.platform.backend_core.study.Phase;
 import com.interview.prep.platform.backend_core.study.PhaseRepository;
 import com.interview.prep.platform.backend_core.study.Topic;
@@ -29,6 +30,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.matching;
 import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +58,7 @@ class AiGatewayIT extends IntegrationTestBase {
     @Autowired private WeekRepository weekRepository;
     @Autowired private TopicRepository topicRepository;
     @Autowired private QuestionRepository questionRepository;
+    @Autowired private ReviewFlagRepository reviewFlagRepository;
 
     @DynamicPropertySource
     static void aiServiceUrl(DynamicPropertyRegistry registry) {
@@ -207,6 +210,60 @@ class AiGatewayIT extends IntegrationTestBase {
         assertThat(afterSecond).hasSize(3);
         assertThat(afterSecond).extracting(Question::getText).contains("My own question?");
         assertThat(afterSecond).filteredOn(q -> "manual".equals(q.getSource())).hasSize(1);
+    }
+
+    // ── Mock interview: start → turn → completion feeds the loop ─────────────
+
+    @Test
+    void mockFlow_startTurnComplete_lowScoreFlagsTopic() throws Exception {
+        Topic topic = createTopic("arrays");
+        String auth = bearer();
+
+        stubPost("/ai/mock", Map.of(
+                "result", Map.of("reply", "Tell me about binary search.", "done", false),
+                "meta", Map.of("model", "claude-haiku-4-5", "cached", false, "tokens", 100, "cost", 0.0)));
+
+        String startBody = mockMvc.perform(post("/api/mocks/start")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("type", "technical", "topicSlug", "arrays"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.transcript[0].text").value("Tell me about binary search."))
+                .andReturn().getResponse().getContentAsString();
+        long sessionId = objectMapper.readTree(startBody).path("id").asLong();
+
+        // Interviewer concludes with a low score on the next turn
+        wiremock.resetAll();
+        stubPost("/ai/mock", Map.of(
+                "result", Map.of("reply", "That's all — thanks.", "done", true, "score", 2,
+                        "feedback", "**What went well** ..."),
+                "meta", Map.of("model", "claude-haiku-4-5", "cached", false, "tokens", 150, "cost", 0.0)));
+
+        mockMvc.perform(post("/api/mocks/" + sessionId + "/turn")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("answer", "I don't know."))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.done").value(true))
+                .andExpect(jsonPath("$.result.score").value(2));
+
+        // Session persisted as completed with feedback
+        mockMvc.perform(get("/api/mocks/" + sessionId).header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("completed"))
+                .andExpect(jsonPath("$.feedback.score").value(2));
+
+        // Feedback loop: score <= 2 creates a review flag and lowers confidence
+        assertThat(reviewFlagRepository.findByUserIdAndTopicIdAndResolved(testUserId, topic.getId(), false))
+                .hasSize(1);
+        assertThat(topicRepository.findById(topic.getId()).orElseThrow().getConfidence()).isEqualTo(50);
+
+        // Turns on a finished session are rejected
+        mockMvc.perform(post("/api/mocks/" + sessionId + "/turn")
+                        .header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("answer", "one more"))))
+                .andExpect(status().isConflict());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

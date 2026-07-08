@@ -21,6 +21,14 @@ public class MockController {
         return ResponseEntity.status(HttpStatus.CREATED).body(mockService.start(userId, request));
     }
 
+    @PostMapping("/{id}/turn")
+    public ResponseEntity<Map<String, Object>> turn(@CurrentUser Long userId,
+                                                    @PathVariable Long id,
+                                                    @RequestBody Map<String, Object> body) {
+        String answer = body.get("answer") instanceof String s ? s : null;
+        return ResponseEntity.ok(mockService.turn(userId, id, answer));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> get(@CurrentUser Long userId, @PathVariable Long id) {
         return ResponseEntity.ok(mockService.get(userId, id));

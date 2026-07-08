@@ -160,6 +160,11 @@ public class AiGatewayService {
         }
     }
 
+    /** ["Java (expert)", ...] for callers outside this service (e.g. mock interviews). */
+    public List<String> profileSkills(Long userId) {
+        return skillSummaries(loadProfile(userId));
+    }
+
     /** Load the parsed resume profile, unwrapping the {"result": {...}} envelope if present. */
     @SuppressWarnings("unchecked")
     private Map<String, Object> loadProfile(Long userId) {

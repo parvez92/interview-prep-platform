@@ -20,15 +20,19 @@ public class MockSession {
     @Column(nullable = false)
     private Long userId;
 
+    /** technical | system-design | behavioral */
     @Column(nullable = false)
+    private String type = "technical";
+
+    /** set only when the session targets a real study-plan topic */
     private String topicSlug;
 
     @Column(nullable = false)
     private String status = "in_progress";
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
-    private String turnsJson;
+    @Column(columnDefinition = "jsonb", nullable = false)
+    private String turnsJson = "[]";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

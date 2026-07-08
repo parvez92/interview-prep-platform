@@ -45,7 +45,7 @@ export function MockInterviewer() {
     setTurns((prev) => [...prev, { role: 'user', text }]);
     setLoading(true);
     try {
-      const res = await api.post<{ desktop_mode?: boolean; desktop_prompt?: string; result?: { reply: string; done?: boolean; score?: number; feedback?: string } }>(`/ai/mock/${sessionId}`, { answer: text });
+      const res = await api.post<{ desktop_mode?: boolean; desktop_prompt?: string; result?: { reply: string; done?: boolean; score?: number; feedback?: string } }>(`/mocks/${sessionId}/turn`, { answer: text });
       if (res.data.desktop_mode && res.data.desktop_prompt) {
         setDesktopContext('turn');
         setDesktopPrompt(res.data.desktop_prompt);
