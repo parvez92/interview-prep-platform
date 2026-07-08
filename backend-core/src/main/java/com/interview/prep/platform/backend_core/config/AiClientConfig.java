@@ -15,8 +15,8 @@ public class AiClientConfig {
     @Value("${app.ai-service.service-token:dev-service-token}")
     private String serviceToken;
 
-    // 10-minute timeout — local LLMs (e.g. 27B models via Ollama) can be very slow
-    private static final int AI_TIMEOUT_MS = 600_000;
+    // 30-minute timeout — a comprehensive plan on a local 27B can exceed 10 min per call
+    private static final int AI_TIMEOUT_MS = 1_800_000;
 
     @Bean
     public RestClient aiRestClient() {

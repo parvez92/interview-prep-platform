@@ -30,8 +30,9 @@ public class AiGatewayController {
     }
 
     @PostMapping("/seed-plan")
-    public ResponseEntity<Map<String, Object>> seedPlan(@CurrentUser Long userId) {
-        return ResponseEntity.ok(aiGatewayService.seedPlan(userId));
+    public ResponseEntity<Map<String, Object>> seedPlan(@CurrentUser Long userId,
+                                                        @RequestParam(value = "provider", required = false) String provider) {
+        return ResponseEntity.ok(aiGatewayService.seedPlan(userId, provider));
     }
 
     @PostMapping("/seed-plan/manual")

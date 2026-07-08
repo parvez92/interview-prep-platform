@@ -290,20 +290,25 @@ export function Onboarding() {
             plan={plan}
             onRegenerate={() => generatePlan(true)}
             onBack={() => setStep(2)}
-            onCommit={async (editedPlan) => {
+            onCommit={async (editedPlan, seedViaDesktop) => {
               setLoading(true);
               try {
                 await api.put('/onboarding/plan/commit', { phases: editedPlan });
-                // Seed resources/exercises/questions for all topics.
-                // Non-fatal — per-tab "Generate with AI" works as fallback.
-                try {
-                  const seed = await api.post<{ desktop_mode?: boolean; desktop_prompt?: string }>('/ai/seed-plan');
-                  if (seed.data.desktop_mode && seed.data.desktop_prompt) {
-                    // desktop mode: offer the seed prompt for paste-back instead of dropping it
-                    setSeedPrompt(seed.data.desktop_prompt);
-                    return;
-                  }
-                } catch { /* ignore */ }
+                // Seed resources/exercises/questions for all topics. Non-fatal —
+                // per-tab "Generate with AI" works as fallback.
+                const seedPromise = api.post<{ desktop_mode?: boolean; desktop_prompt?: string }>(
+                  `/ai/seed-plan${seedViaDesktop ? '?provider=desktop' : ''}`);
+                // Desktop payloads return instantly; a real LLM seed takes many minutes —
+                // don't block the commit on it, let it finish in the background.
+                const fast = await Promise.race([
+                  seedPromise,
+                  new Promise<null>((r) => setTimeout(() => r(null), 3000)),
+                ]);
+                if (fast && fast.data.desktop_mode && fast.data.desktop_prompt) {
+                  setSeedPrompt(fast.data.desktop_prompt);
+                  return;
+                }
+                seedPromise.catch(() => { /* background seeding is best-effort */ });
                 finishOnboarding();
               } finally { setLoading(false); }
             }}
@@ -777,12 +782,13 @@ function TargetsStep({ targets, onChange, onBack, onNext, loading }: {
 function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }: {
   plan:         Phase[];
   onBack:       () => void;
-  onCommit:     (plan: Phase[]) => void;
+  onCommit:     (plan: Phase[], seedViaDesktop: boolean) => void;
   onRegenerate: () => void;
   loading:      boolean;
 }) {
   const [plan, setPlan] = useState<Phase[]>(initialPlan);
   const [inputs, setInputs] = useState<Record<string, string>>({});
+  const [seedViaDesktop, setSeedViaDesktop] = useState(false);
 
   const removeTopic = (pi: number, wi: number, ti: number) => {
     setPlan(prev => prev.map((phase, p) => {
@@ -898,9 +904,19 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }
         ))}
       </div>
 
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '.8125rem', color: 'var(--ink-2)', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={seedViaDesktop}
+          onChange={(e) => setSeedViaDesktop(e.target.checked)}
+        />
+        Seed study materials via desktop copy-paste (no model call) — otherwise your configured AI
+        fills topics in the background after commit.
+      </label>
+
       <div className={styles.nav}>
         <button className="btn btn-ghost" onClick={onBack}><IconChevronLeft size={15} /> Back</button>
-        <button className="btn btn-primary" onClick={() => onCommit(plan)} disabled={loading}>
+        <button className="btn btn-primary" onClick={() => onCommit(plan, seedViaDesktop)} disabled={loading}>
           {loading ? <Spinner size={15} /> : <IconCheck size={15} />}
           Commit plan — start prep!
         </button>

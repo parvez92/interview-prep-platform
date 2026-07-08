@@ -42,7 +42,8 @@ class OllamaProvider(LLMProvider):
         msgs.extend(messages)
 
         log.info("Ollama complete → model=%s base=%s thinking=%s", self._model, self._base, use_thinking)
-        async with httpx.AsyncClient(timeout=600) as client:
+        # 30 min: a comprehensive plan (~100 topics) on a local 27B takes >10 min per attempt
+        async with httpx.AsyncClient(timeout=1800) as client:
             # Use the native /api/chat endpoint — it honours think=false (v0.30+).
             # The OpenAI-compat /v1/chat/completions ignores the think param.
             resp = await client.post(

@@ -76,6 +76,9 @@
 .planPhase {
   border: 1px solid var(--line); border-radius: var(--radius);
   overflow: hidden;
+  /* inside the scrolling flex column, cards must not compress to fit 65vh —
+     shrinking clips their weeks/topics instead of letting the list scroll */
+  flex-shrink: 0;
 }
 .planPhaseHeader {
   display: flex; align-items: center; gap: 8px;

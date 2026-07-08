@@ -66,8 +66,13 @@ public class AiGatewayService {
         return out;
     }
 
-    @SuppressWarnings("unchecked")
     public Map<String, Object> seedPlan(Long userId) {
+        return seedPlan(userId, null);
+    }
+
+    /** providerOverride "desktop" returns the seed prompt for copy-paste instead of calling a model. */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> seedPlan(Long userId, String providerOverride) {
         List<Topic> topics = topicRepository.findByUserIdOrdered(userId);
         if (topics.isEmpty()) return Map.of("seeded", 0, "total", 0);
 
@@ -95,7 +100,8 @@ public class AiGatewayService {
         requestBody.put("profile", profile);
         requestBody.put("target_role", targetRole.strip());
 
-        Map<String, Object> response = aiClient.post(userId, "/ai/seed-plan", requestBody, "seed-plan");
+        Map<String, Object> response = aiClient.post(userId, "/ai/seed-plan", requestBody, "seed-plan",
+                providerOverride, null);
 
         Object result = response.get("result");
         if (!(result instanceof Map<?, ?> resultMap)) return Map.of("seeded", 0, "total", topics.size());
