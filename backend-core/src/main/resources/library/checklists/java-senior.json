@@ -1,0 +1,19 @@
+{"category":"language","skill":"java","level":"senior","items":[
+ {"id":"class-loading","label":"JVM architecture & class loading","match":["class loading","classloader","parent delegation"]},
+ {"id":"memory-regions","label":"Memory regions — heap/stack/metaspace/off-heap","match":["heap","metaspace","stack layout","generational"]},
+ {"id":"gc","label":"Garbage collectors — G1/ZGC/Shenandoah","match":["G1","ZGC","Shenandoah","garbage collect"]},
+ {"id":"gc-tuning","label":"GC tuning flags & OOM diagnosis","match":["OOM","heap dump","-XX","GC tuning"]},
+ {"id":"jit","label":"JIT & tiered compilation","match":["JIT","tiered","C2","escape analysis"]},
+ {"id":"graalvm","label":"GraalVM native image & AOT","match":["GraalVM","native image","AOT"]},
+ {"id":"leaks","label":"Memory leak patterns & diagnosis","match":["memory leak","ThreadLocal leak","retained heap"]},
+ {"id":"profiling","label":"Profiling — JFR, async-profiler","match":["JFR","async-profiler","Flight Recorder","profiling"]},
+ {"id":"jmm","label":"Java Memory Model & happens-before","match":["happens-before","memory model","JMM"]},
+ {"id":"sync","label":"synchronized, volatile, locks","match":["volatile","synchronized","ReentrantLock","StampedLock"]},
+ {"id":"pools","label":"ExecutorService & thread pool sizing","match":["ThreadPoolExecutor","ExecutorService","thread pool"]},
+ {"id":"cf","label":"CompletableFuture & async composition","match":["CompletableFuture","thenCompose","async composition"]},
+ {"id":"virtual-threads","label":"Virtual threads (Java 21 / Loom)","match":["virtual thread","Loom","carrier thread"]},
+ {"id":"streams","label":"Stream API & collectors","match":["Stream API","collector","groupingBy"]},
+ {"id":"collections","label":"Collections internals — HashMap/ConcurrentHashMap","match":["HashMap intern","ConcurrentHashMap","load factor","collision"]},
+ {"id":"records-sealed","label":"Records, sealed classes & pattern matching","match":["record","sealed","pattern matching"]},
+ {"id":"generics","label":"Generics, wildcards & type erasure","match":["generics","type erasure","PECS","wildcard"]}
+]}

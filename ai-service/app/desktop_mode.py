@@ -19,7 +19,10 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 log = logging.getLogger(__name__)
 
-_PASSTHROUGH = frozenset({"/ai/embed-resume", "/ai/settings", "/health"})
+_PASSTHROUGH = frozenset({
+    "/ai/embed-resume", "/ai/embed-weak-answer", "/ai/delete-weak-answer",
+    "/ai/settings", "/health",
+})
 _MCP_PREFIX = "/mcp"
 
 _MCP_TOOLS = [

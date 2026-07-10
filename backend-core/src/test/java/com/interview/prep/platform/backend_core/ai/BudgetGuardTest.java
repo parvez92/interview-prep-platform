@@ -58,7 +58,16 @@ class BudgetGuardTest {
     }
 
     @Test
-    void noSettings_fallsBackToHaiku() {
+    void noSettings_withinBudget_fallsBackToStrongDefault() {
+        when(usageService.isOverBudget(1L)).thenReturn(false);
+        when(userSettingsRepository.findByUserId(1L)).thenReturn(Optional.empty());
+
+        assertThat(guard.resolveModel(1L)).isEqualTo("claude-sonnet-5");
+    }
+
+    @Test
+    void noSettings_overBudget_fallsBackToHaiku() {
+        when(usageService.isOverBudget(1L)).thenReturn(true);
         when(userSettingsRepository.findByUserId(1L)).thenReturn(Optional.empty());
 
         assertThat(guard.resolveModel(1L)).isEqualTo("claude-haiku-4-5-20251001");

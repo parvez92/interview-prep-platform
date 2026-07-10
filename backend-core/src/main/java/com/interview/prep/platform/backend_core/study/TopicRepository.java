@@ -25,6 +25,9 @@ public interface TopicRepository extends JpaRepository<Topic, Long> {
             ORDER BY p.displayOrder ASC, w.displayOrder ASC, t.displayOrder ASC""")
     List<Topic> findByUserIdWithWeekOrdered(Long userId);
 
+    @Query("SELECT t FROM Topic t WHERE t.week.id = :weekId ORDER BY t.displayOrder ASC, t.id ASC")
+    List<Topic> findByWeekIdOrdered(Long weekId);
+
     long countByUserId(Long userId);
 
     long countByUserIdAndStatus(Long userId, String status);

@@ -62,13 +62,14 @@ async def global_error(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"error": {"code": "INTERNAL_ERROR", "message": "Something went wrong on the AI side. Please try again."}})
 
 
-from app.routers import agents, analyze, depth, guide, mock, narrative, parse, score, seed  # noqa: E402
+from app.routers import agents, analyze, depth, feedback, guide, mock, narrative, parse, score, seed  # noqa: E402
 from app.routers import settings as settings_router  # noqa: E402
 
 app.include_router(parse.router)
 app.include_router(depth.router)
 app.include_router(narrative.router)
 app.include_router(guide.router)
+app.include_router(feedback.router)
 app.include_router(seed.router)
 app.include_router(score.router)
 app.include_router(analyze.router)

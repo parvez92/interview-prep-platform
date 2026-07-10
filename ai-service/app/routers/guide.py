@@ -9,7 +9,7 @@ from app.cache import cache_get, cache_put, make_cache_key
 from app.deps import DB, ModelName, ProviderName, ServiceAuth, UserId
 from app.linkcheck import filter_live_urls
 from app.providers.registry import get_provider
-from app.rag.retriever import retrieve
+from app.rag.retriever import retrieve, retrieve_weak_answers
 from app.routers.parse import _extract_json
 from app.usage import log_usage
 
@@ -34,6 +34,7 @@ class GuideRequest(BaseModel):
     confidence: int = 3
     skills: list[str] = []
     angle: str = ""  # plan hint or previously generated interview angle
+    review_reasons: list[str] = []  # unresolved feedback-loop flags for this topic (from Java)
 
 
 @router.post("/guide")
@@ -51,6 +52,10 @@ async def guide(
     key_payload = {"user_id": user_id, "tab": body.tab, "topic": body.topic_title, "v": 2}
     if body.tab == "overview":
         key_payload["confidence"] = body.confidence
+    # A new feedback-loop flag must regenerate the content it targets — the whole point
+    # of the loop. Only added when flags exist, so unflagged topics keep their cache.
+    if body.tab in ("overview", "questions") and body.review_reasons:
+        key_payload["flags"] = sorted(body.review_reasons)
     cache_key = make_cache_key("guide", key_payload)
 
     cached = await cache_get(pool, user_id, cache_key)
@@ -58,8 +63,15 @@ async def guide(
         return {"result": cached["content"], "meta": {"model": cached["model"], "cached": True, "tokens": 0, "cost": 0.0}}
 
     context_chunks: list = []
-    if body.tab == "overview":
-        context_chunks = await retrieve(pool, provider, user_id, body.topic_title, top_k=4)
+    weak_answers: list = []
+    try:
+        if body.tab == "overview":
+            context_chunks = await retrieve(pool, provider, user_id, body.topic_title, top_k=4)
+        if body.tab in ("overview", "questions"):
+            weak_answers = await retrieve_weak_answers(pool, provider, user_id, body.topic_title, top_k=3)
+    except Exception as exc:
+        # retrieval enriches the prompt; it must never block generation
+        log.warning("guide retrieval skipped for %r: %s", body.topic_title, exc)
 
     template_name = _TEMPLATE.get(body.tab, "guide_overview.md")
     system = _env.get_template(template_name).render(
@@ -70,6 +82,8 @@ async def guide(
         skills=body.skills,
         angle=body.angle,
         context_chunks=context_chunks,
+        weak_answers=weak_answers,
+        review_reasons=body.review_reasons,
     )
 
     # In-depth content (multi-paragraph overviews, 8-10 questions with scenarios) needs headroom

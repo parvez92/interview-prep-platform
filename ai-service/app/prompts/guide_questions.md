@@ -6,6 +6,14 @@ Seniority: {{ seniority }}
 {% if angle %}Focus: {{ angle }}{% endif %}
 {% if skills %}Candidate's stack (probe these where relevant): {{ skills | join(", ") }}{% endif %}
 
+{% if weak_answers %}
+## Questions the candidate recently answered poorly (real interviews)
+{% for wa in weak_answers %}
+- {{ wa }}
+{% endfor %}
+Include 2-3 questions that re-test the same underlying concepts from a DIFFERENT angle than the original phrasing — the goal is to verify the gap is closed, not to let them rehearse one memorised answer.
+{% endif %}
+
 Return ONLY valid JSON:
 {"questions":[{"text":"Question text?"}]}
 

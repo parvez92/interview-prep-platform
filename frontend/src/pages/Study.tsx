@@ -115,7 +115,7 @@ function TopicRow({ topic }: { topic: TopicLite }) {
         {done
           ? <IconCircleCheck size={15} style={{ color: 'var(--green)', flexShrink: 0 }} />
           : <IconCircle      size={15} style={{ color: 'var(--ink-4)', flexShrink: 0 }} />}
-        <span className={`${styles.topicName} ${done ? styles.topicDone : ''}`}>
+        <span className={`${styles.topicName} ${done ? styles.topicDone : ''}`} title={topic.title}>
           {topic.title}
         </span>
         <div className={styles.topicChips}>

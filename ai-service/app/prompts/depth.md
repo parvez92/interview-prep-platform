@@ -13,11 +13,27 @@ Match this density exactly — note how EVERY point carries a flag, number, iden
   scope: {{ t.scope or t.title }}
 {% endfor %}
 
+{% if related_topics %}
+## Already covered elsewhere in this plan — do NOT re-teach
+Cards for these adjacent topics already exist. Where a unit borders one, reference it in one clause ("covered under X") and spend your points on what is distinct to THIS unit:
+{% for rt in related_topics %}
+- {{ rt.title }}: {{ rt.text | truncate(200) }}
+{% endfor %}
+{% endif %}
+
 ## Method — enumerate, then compress (MANDATORY)
 For each unit, FIRST fill `_scratch` with 8-12 raw specifics you actually know about it: real flags, defaults, thresholds, version facts, named problems/patterns/tools, comparisons with numbers. THEN write the final card(s) by compressing the best of the scratch material. `_scratch` is discarded after generation — don't polish it, just recall.
 
 ## Splitting
 If split_hint is "likely" (or "maybe" and the material genuinely divides), emit 2-3 cards for that unit — each a distinct, interview-separable subtopic. Otherwise exactly 1 card. Every card carries "parent" = the unit's slug.
+
+A unit's scope is a CONTRACT: every technology and mechanism named in its title or scope line must end up taught by some card. Narrowing a three-mechanism unit down to one card silently deletes two thirds of the curriculum — split instead.
+
+{% if must_cover %}
+## Missing scope — this is a REPAIR pass
+A previous attempt at this unit dropped the following: {{ must_cover | join(", ") }}.
+Emit one card per dropped term ({{ must_cover | length }} card(s) total), each naming its term in the title. Do NOT re-emit cards for scope that was already covered. Same schema, same density, same exemplar.
+{% endif %}
 
 ## Card requirements (mechanically validated — violations are regenerated)
 - `concept`: 2-4 sentences stating the MECHANISM — how it works, what trade-off sits at its heart. Never "learn/understand/explore…".

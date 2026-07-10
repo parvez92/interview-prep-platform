@@ -210,16 +210,32 @@ def bad_token_headers() -> dict[str, str]:
 # Mock provider — patches the provider registry per test
 # ---------------------------------------------------------------------------
 
+def _install_provider(monkeypatch, provider: MockLLMProvider):
+    """
+    Patch registry._build_provider rather than get_provider: routers bind
+    get_provider at import time, so patching the registry attribute alone
+    never reaches them. _build_provider is resolved inside the registry
+    module on every cache miss, so this covers all routers.
+    """
+    from app.providers import registry
+    registry._cache.clear()
+    monkeypatch.setattr(registry, "_build_provider", lambda *a, **kw: provider)
+
+
 @pytest.fixture()
-def mock_provider(monkeypatch) -> MockLLMProvider:
+def mock_provider(monkeypatch) -> AsyncIterator[MockLLMProvider]:
     provider = MockLLMProvider()
-    monkeypatch.setattr("app.providers.registry.get_provider", lambda *a, **kw: provider)
-    return provider
+    _install_provider(monkeypatch, provider)
+    yield provider
+    from app.providers import registry
+    registry._cache.clear()
 
 
 @pytest.fixture()
-def mock_provider_with_json(monkeypatch) -> MockLLMProvider:
+def mock_provider_with_json(monkeypatch) -> AsyncIterator[MockLLMProvider]:
     """Provider that returns valid JSON (useful for parse/analyze/score)."""
     provider = MockLLMProvider(complete_text='{"rating": 4, "strengths": ["clear"], "weaknesses": [], "ideal_points": [], "flag_for_review": false, "summary": "Good."}')
-    monkeypatch.setattr("app.providers.registry.get_provider", lambda *a, **kw: provider)
-    return provider
+    _install_provider(monkeypatch, provider)
+    yield provider
+    from app.providers import registry
+    registry._cache.clear()

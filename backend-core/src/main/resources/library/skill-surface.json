@@ -1,0 +1,108 @@
+{
+  "_doc": [
+    "Maps a topic's scope terms onto a resume skill, so TopicTagger can decide new|refresh|exp.",
+    "`names` are matched against the confirmed profile's skill names (case-insensitive substring),",
+    "`terms` against the topic's title + scope.",
+    "",
+    "`terms` lists the ESTABLISHED surface of a skill — the parts a practitioner with the claimed",
+    "years has necessarily touched. It deliberately omits recent additions (virtual threads/Loom,",
+    "records, sealed classes, GraalVM native image): claiming 'Java, expert, 11 yrs' says nothing",
+    "about having used a 2023 API, so those topics stay `new` rather than being downgraded to a",
+    "refresh of claimed expertise. Add a term here only when the skill claim genuinely implies it."
+  ],
+  "skills": [
+    {
+      "skill": "java",
+      "names": ["java", "jvm"],
+      "terms": [
+        "jvm", "heap", "stack layout", "generational", "tlab", "eden", "survivor",
+        "garbage collect", "gc tuning", "g1", "zgc", "shenandoah", "metaspace",
+        "classloader", "class loading", "parent delegation",
+        "happens-before", "memory model", "jmm", "volatile", "synchronized",
+        "reentrantlock", "stampedlock", "deadlock", "livelock",
+        "threadpoolexecutor", "executorservice", "thread pool", "forkjoinpool",
+        "completablefuture", "thencompose",
+        "stream", "collector", "groupingby", "optional",
+        "hashmap", "concurrenthashmap", "load factor", "collections internals",
+        "generics", "type erasure", "wildcard",
+        "jit", "tiered compilation", "escape analysis",
+        "jfr", "flight recorder", "async-profiler", "profiling",
+        "oom", "heap dump", "memory leak", "-xx"
+      ]
+    },
+    {
+      "skill": "spring",
+      "names": ["spring", "spring boot"],
+      "terms": [
+        "spring", "bean lifecycle", "applicationcontext", "ioc",
+        "beanpostprocessor", "beanfactorypostprocessor", "aop", "cglib", "self-invocation",
+        "applicationevent", "transactionaleventlistener",
+        "auto-config", "conditionalon", "configurationproperties",
+        "graceful shutdown", "liveness", "readiness",
+        "jpa", "n+1", "entitygraph", "lazyinitialization",
+        "propagation", "isolation", "optimistic lock", "pessimistic",
+        "projection", "querydsl", "specification",
+        "flyway", "liquibase", "cacheable", "hikaricp",
+        "securityfilterchain", "filter chain", "jwt", "jwks", "oauth2", "preauthorize",
+        "mono", "flux", "reactor", "backpressure", "webflux", "r2dbc", "webclient",
+        "cloud gateway", "config server", "circuit breaker",
+        "micrometer", "openfeign", "actuator",
+        "kafkalistener", "rabbitlistener", "serviceactivator", "itemreader",
+        "testcontainers", "webmvctest"
+      ]
+    },
+    {
+      "skill": "kafka",
+      "names": ["kafka"],
+      "terms": [
+        "kafka", "partition", "consumer group", "isr", "rebalance", "offset",
+        "exactly-once", "idempotent producer", "acks", "log compaction", "kafka connect"
+      ]
+    },
+    {
+      "skill": "aws",
+      "names": ["aws", "amazon web services"],
+      "terms": [
+        "aws", "s3", "dynamodb", "lambda", "sqs", "sns", "kinesis", "ec2", "iam",
+        "step functions", "bedrock", "cloudwatch", "api gateway"
+      ]
+    },
+    {
+      "skill": "kubernetes",
+      "names": ["kubernetes", "k8s"],
+      "terms": [
+        "kubernetes", "pod", "deployment", "statefulset", "ingress", "helm",
+        "hpa", "sidecar", "kubelet"
+      ]
+    },
+    {
+      "skill": "docker",
+      "names": ["docker"],
+      "terms": ["docker", "container image", "dockerfile", "layer cache", "multi-stage build"]
+    },
+    {
+      "skill": "microservices",
+      "names": ["microservices"],
+      "terms": [
+        "microservice", "saga", "outbox", "service mesh", "bulkhead",
+        "api composition", "strangler"
+      ]
+    },
+    {
+      "skill": "event-driven architecture",
+      "names": ["event-driven", "event driven"],
+      "terms": [
+        "event-driven", "event sourcing", "cqrs", "message broker", "rabbitmq",
+        "amqp", "dead letter", "at-least-once"
+      ]
+    },
+    {
+      "skill": "api design",
+      "names": ["api design", "api management", "apigee"],
+      "terms": [
+        "rest", "soap", "openapi", "apigee", "rate limit", "idempotency key",
+        "api versioning", "hateoas"
+      ]
+    }
+  ]
+}

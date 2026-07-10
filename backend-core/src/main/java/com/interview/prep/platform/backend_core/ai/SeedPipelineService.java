@@ -1,6 +1,7 @@
 package com.interview.prep.platform.backend_core.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.interview.prep.platform.backend_core.onboarding.ResumeProfileRepository;
 import com.interview.prep.platform.backend_core.study.Topic;
 import com.interview.prep.platform.backend_core.study.TopicRepository;
 import com.interview.prep.platform.backend_core.user.UserSettings;
@@ -37,11 +38,16 @@ public class SeedPipelineService {
     private static final int SUPPORT_BATCH_LOCAL = 6;
     private static final int SUPPORT_BATCH_API = 12;
 
+    /** A coarse unit expands to at most this many children, including the in-place one. */
+    private static final int MAX_CARDS_PER_COARSE = 4;
+
     private final TopicRepository topicRepository;
     private final UserSettingsRepository userSettingsRepository;
+    private final ResumeProfileRepository resumeProfileRepository;
     private final AiClient aiClient;
     private final AiGatewayService aiGatewayService;
     private final BudgetGuard budgetGuard;
+    private final TopicTagger topicTagger;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate tx;
 
@@ -54,16 +60,20 @@ public class SeedPipelineService {
 
     public SeedPipelineService(TopicRepository topicRepository,
                                UserSettingsRepository userSettingsRepository,
+                               ResumeProfileRepository resumeProfileRepository,
                                AiClient aiClient,
                                AiGatewayService aiGatewayService,
                                BudgetGuard budgetGuard,
+                               TopicTagger topicTagger,
                                ObjectMapper objectMapper,
                                PlatformTransactionManager txManager) {
         this.topicRepository = topicRepository;
         this.userSettingsRepository = userSettingsRepository;
+        this.resumeProfileRepository = resumeProfileRepository;
         this.aiClient = aiClient;
         this.aiGatewayService = aiGatewayService;
         this.budgetGuard = budgetGuard;
+        this.topicTagger = topicTagger;
         this.objectMapper = objectMapper;
         this.tx = new TransactionTemplate(txManager);
     }
@@ -159,33 +169,109 @@ public class SeedPipelineService {
             byCategory.computeIfAbsent(cat, k -> new ArrayList<>()).add(t);
         }
 
+        List<ProfileSkills.Skill> skills = ProfileSkills.from(
+                resumeProfileRepository.findByUserId(userId).orElse(null), objectMapper);
+
         for (List<Topic> catTopics : byCategory.values()) {
             for (int i = 0; i < catTopics.size(); i += depthBatch) {
                 List<Topic> batch = catTopics.subList(i, Math.min(i + depthBatch, catTopics.size()));
-                Map<String, List<Map<String, Object>>> cardsByParent = callDepth(userId, batch, false, modelOverride);
+                Map<String, List<Map<String, Object>>> cardsByParent = callDepth(userId, batch, false, modelOverride, List.of());
 
                 for (Topic coarse : batch) {
                     List<Map<String, Object>> cards = validCards(cardsByParent.get(coarse.getSlug()));
                     if (cards.isEmpty()) {
                         // per-topic regeneration, cache bypassed
-                        cards = validCards(callDepth(userId, List.of(coarse), true, modelOverride).get(coarse.getSlug()));
+                        cards = validCards(callDepth(userId, List.of(coarse), true, modelOverride, List.of())
+                                .get(coarse.getSlug()));
                     }
                     if (cards.isEmpty()) {
                         markNeedsReview(coarse.getId());
                         st.put("needsReview", (int) st.get("needsReview") + 1);
                         continue;
                     }
-                    persistCards(userId, coarse.getId(), cards);
-                    st.put("topicsDeepened", (int) st.get("topicsDeepened") + cards.size());
+                    Deepened deepened = ensureScopeCovered(userId, coarse, cards, modelOverride);
+                    persistCards(userId, coarse.getId(), deepened, skills);
+                    if (deepened.scopeLost()) st.put("needsReview", (int) st.get("needsReview") + 1);
+                    st.put("topicsDeepened", (int) st.get("topicsDeepened") + deepened.cards().size());
                 }
             }
         }
+        renumber(weekTopics.get(0).getWeek().getId());
     }
 
-    /** Calls /ai/deep-dive for a batch; returns cards grouped by parent slug. */
+    /**
+     * @param scopeLost the unit named scope no child teaches, and regeneration couldn't
+     *                  recover it — surface the topic for manual review rather than hide it
+     */
+    private record Deepened(List<Map<String, Object>> cards, boolean scopeLost) {}
+
+    /**
+     * The depth pass narrows instead of splitting: given a coarse unit covering three
+     * mechanisms it returns one card about the first and silently drops the rest. Every
+     * scope term must survive into some child; the ones that don't are regenerated.
+     */
+    private Deepened ensureScopeCovered(Long userId, Topic coarse,
+                                        List<Map<String, Object>> cards,
+                                        String modelOverride) {
+        List<String> terms = ScopeTerms.contract(coarse.getTitle(), coarse.getAngle());
+        if (terms.isEmpty()) return new Deepened(cards, false);
+
+        boolean narrowed = "likely".equalsIgnoreCase(coarse.getSplitHint()) && cards.size() == 1;
+        List<String> missing = ScopeTerms.uncovered(terms, cardTexts(cards));
+        if (!narrowed && missing.isEmpty()) return new Deepened(cards, false);
+
+        List<String> mustCover = missing.isEmpty() ? terms : missing;
+        log.info("depth narrowed '{}' ({} card(s)); regenerating for {}",
+                coarse.getSlug(), cards.size(), mustCover);
+
+        List<Map<String, Object>> extra = validCards(
+                callDepth(userId, List.of(coarse), true, modelOverride, mustCover).get(coarse.getSlug()));
+        if (extra.isEmpty()) {
+            return new Deepened(cards, !missing.isEmpty());
+        }
+
+        List<Map<String, Object>> merged = new ArrayList<>(cards);
+        for (Map<String, Object> card : extra) {
+            boolean duplicate = merged.stream().anyMatch(c ->
+                    String.valueOf(c.get("title")).equalsIgnoreCase(String.valueOf(card.get("title"))));
+            if (!duplicate && merged.size() < MAX_CARDS_PER_COARSE) merged.add(card);
+        }
+        return new Deepened(merged, !ScopeTerms.uncovered(terms, cardTexts(merged)).isEmpty());
+    }
+
+    /** title + points, the text a scope term has to show up in. */
+    private static List<String> cardTexts(List<Map<String, Object>> cards) {
+        return cards.stream().map(card -> {
+            StringBuilder sb = new StringBuilder(String.valueOf(card.get("title")));
+            if (card.get("points") instanceof List<?> points) {
+                points.forEach(p -> sb.append(' ').append(p));
+            }
+            return sb.toString();
+        }).toList();
+    }
+
+    /**
+     * Splits are inserted with the parent's display order, which leaves ties. Re-flatten the
+     * week so the sidebar order is deterministic, keeping each split next to its parent.
+     */
+    private void renumber(Long weekId) {
+        tx.executeWithoutResult(s -> {
+            List<Topic> topics = topicRepository.findByWeekIdOrdered(weekId);
+            for (int i = 0; i < topics.size(); i++) {
+                topics.get(i).setDisplayOrder(i);
+            }
+            topicRepository.saveAll(topics);
+        });
+    }
+
+    /**
+     * Calls /ai/deep-dive for a batch; returns cards grouped by parent slug.
+     * {@code mustCover} names scope terms an earlier attempt dropped — the prompt then
+     * generates cards for exactly those, instead of re-rolling the whole unit.
+     */
     @SuppressWarnings("unchecked")
     private Map<String, List<Map<String, Object>>> callDepth(Long userId, List<Topic> batch, boolean regenerate,
-                                                             String modelOverride) {
+                                                             String modelOverride, List<String> mustCover) {
         UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
 
         List<Map<String, Object>> topicList = batch.stream().map(t -> {
@@ -203,6 +289,7 @@ public class SeedPipelineService {
         body.put("seniority", settings != null && settings.getTargetLevel() != null ? settings.getTargetLevel() : "mid");
         body.put("target_role", settings != null && settings.getTargetRole() != null ? settings.getTargetRole() : "Software Engineer");
         if (regenerate) body.put("regenerate", true);
+        if (mustCover != null && !mustCover.isEmpty()) body.put("must_cover", mustCover);
 
         Map<String, List<Map<String, Object>>> byParent = new HashMap<>();
         try {
@@ -224,7 +311,7 @@ public class SeedPipelineService {
         return byParent;
     }
 
-    /** Keeps only cards that pass mechanical validation, max 3 per coarse topic. */
+    /** Keeps only cards that pass mechanical validation, capped per coarse topic. */
     private List<Map<String, Object>> validCards(List<Map<String, Object>> cards) {
         if (cards == null) return List.of();
         List<Map<String, Object>> valid = new ArrayList<>();
@@ -232,7 +319,7 @@ public class SeedPipelineService {
             List<String> failures = ContentValidator.validateDepthTopic(card);
             if (failures.isEmpty()) {
                 valid.add(card);
-                if (valid.size() == 3) break;
+                if (valid.size() == MAX_CARDS_PER_COARSE) break;
             } else {
                 log.info("depth card rejected ({}): {}", card.get("title"), failures);
             }
@@ -247,14 +334,25 @@ public class SeedPipelineService {
         }));
     }
 
-    /** First card updates the coarse topic in place; extra cards become sibling topics. */
-    private void persistCards(Long userId, Long coarseId, List<Map<String, Object>> cards) {
+    /**
+     * First card updates the coarse topic in place; extra cards become sibling topics.
+     * Every child — including the in-place one — is re-slugged from its FINAL title and
+     * remembers the coarse slug it came from, so slug and title never drift apart.
+     */
+    private void persistCards(Long userId, Long coarseId, Deepened deepened,
+                              List<ProfileSkills.Skill> skills) {
+        List<Map<String, Object>> cards = deepened.cards();
         tx.executeWithoutResult(s -> {
             Topic coarse = topicRepository.findById(coarseId).orElse(null);
             if (coarse == null) return;
 
-            applyCard(coarse, cards.get(0));
-            coarse.setNeedsReview(false);
+            String coarseSlug = coarse.getSlug();
+            String source = coarse.getSource();
+
+            applyCard(coarse, cards.get(0), skills);
+            coarse.setCoarseParent(coarseSlug);
+            coarse.setSlug(uniqueSlug(userId, coarse.getTitle(), coarse.getId()));
+            coarse.setNeedsReview(deepened.scopeLost());
             topicRepository.save(coarse);
 
             for (int i = 1; i < cards.size(); i++) {
@@ -262,20 +360,19 @@ public class SeedPipelineService {
                 split.setUserId(userId);
                 split.setWeek(coarse.getWeek());
                 split.setCode("t-" + System.nanoTime());
-                split.setSlug(uniqueSlug(userId, str(cards.get(i), "title", coarse.getSlug() + "-" + i)));
-                split.setSource("ai-generated");
+                split.setSource(source);            // children inherit why the plan added the unit
                 split.setStatus("todo");
-                split.setTag("new");
                 split.setCategory(coarse.getCategory());
-                split.setCoarseParent(coarse.getSlug());
+                split.setCoarseParent(coarseSlug);
                 split.setDisplayOrder(coarse.getDisplayOrder());
-                applyCard(split, cards.get(i));
+                applyCard(split, cards.get(i), skills);
+                split.setSlug(uniqueSlug(userId, split.getTitle(), null));
                 topicRepository.save(split);
             }
         });
     }
 
-    private void applyCard(Topic topic, Map<String, Object> card) {
+    private void applyCard(Topic topic, Map<String, Object> card, List<ProfileSkills.Skill> skills) {
         String title = str(card, "title", null);
         if (title != null && !title.isBlank()) {
             topic.setTitle(title.length() > 255 ? title.substring(0, 255) : title);
@@ -293,10 +390,13 @@ public class SeedPipelineService {
                 topic.setPoints("[]");
             }
         }
+        // tag reflects the FINAL title/angle, so it is assigned after the card is applied
+        topic.setTag(topicTagger.tag(topic.getCategory(), topic.getTitle(), topic.getAngle(), skills));
         topic.setSplitHint(null); // consumed
     }
 
-    private String uniqueSlug(Long userId, String title) {
+    /** @param selfId topic allowed to keep its own slug (in-place update), or null */
+    private String uniqueSlug(Long userId, String title, Long selfId) {
         String base = title.toLowerCase()
                 .replaceAll("[^a-z0-9\\s-]", "")
                 .strip()
@@ -306,10 +406,16 @@ public class SeedPipelineService {
         if (base.length() > 240) base = base.substring(0, 240);
         String slug = base;
         int i = 2;
-        while (topicRepository.existsByUserIdAndSlug(userId, slug)) {
+        while (takenByOther(userId, slug, selfId)) {
             slug = base + "-" + i++;
         }
         return slug;
+    }
+
+    private boolean takenByOther(Long userId, String slug, Long selfId) {
+        return topicRepository.findByUserIdAndSlug(userId, slug)
+                .filter(t -> !t.getId().equals(selfId))
+                .isPresent();
     }
 
     private static String str(Map<String, Object> m, String key, String def) {

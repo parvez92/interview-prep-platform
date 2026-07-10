@@ -98,6 +98,12 @@ Per coarse topic, small batches: **2-3 topics per call**. Each call includes exa
   comparisons) and THEN the compressed `points`. The `_scratch` field is stripped before
   storage. This is the single biggest density lever for mid-size models: recall first,
   compress second.
+- **Cross-batch cohesion (RAG, implemented):** every generated card is embedded into
+  `topic_chunk` (pgvector, Python-owned, DDL in Flyway V17). Before each depth call the
+  service retrieves the ≤4 nearest already-generated cards from *other* coarse topics
+  (cosine distance < 0.5) and injects them as "already covered elsewhere — do not
+  re-teach". Since the pipeline runs week by week, later weeks see earlier weeks' cards.
+  Retrieval and embedding are best-effort: any failure is logged and generation proceeds.
 
 **Mechanical validation (code, per §4 of curriculum-content-standard.md, now enforced):**
 - point PASSES iff it matches ≥1 of: `-{1,2}[A-Za-z]` flag pattern, a digit, a `<code>` span,
@@ -107,6 +113,47 @@ Per coarse topic, small batches: **2-3 topics per call**. Each call includes exa
 - 4 ≤ points.length ≤ 6; est_minutes ∈ [20,180].
 Failed topics regenerate **individually** (tiny calls). Two failures → mark
 `needs_review=true` and show a regen button in the UI instead of blocking.
+
+**Covered-split validation (code, `ScopeTerms` + `SeedPipelineService`):**
+The depth pass's habit is to *narrow* a coarse unit rather than split it — given
+`Java concurrency — ThreadPoolExecutor, CompletableFuture, locks` it returns one card about
+ThreadPoolExecutor and silently deletes the rest of the curriculum. So the unit's scope is
+enforced as a contract:
+- `ScopeTerms.contract(title, scope)` extracts the named technologies/mechanisms. A title
+  that enumerates nothing (`kafka-internals`, `Two Sum`) names the unit rather than listing
+  its parts and obliges nothing; only its scope line does.
+- Every term must appear at a **word edge** in some child's title or points — `lock` is
+  covered by `ReentrantLock`, not by `LinkedBlockingQueue`.
+- `split_hint: likely` producing a single child is an automatic failure.
+- Uncovered terms trigger one repair call: `POST /ai/deep-dive` with `must_cover: [terms]`,
+  which asks for one card per dropped term. `must_cover` is part of the cache key, so a
+  repair result is never served to a plain call. Still uncovered → `needs_review=true`.
+- Children — including the one updated in place — are re-slugged from their FINAL titles and
+  carry `coarse_parent` = the original coarse slug. The week is then renumbered so splits
+  sit next to their parent instead of tying on `display_order`.
+
+**`tag` and `source` are assigned in code, never by the LLM:**
+- `source` ∈ `resume | standard | interest | custom` comes from the PLAN pass (it knows why
+  it added the unit); children inherit it; the review screen's own additions are `custom`.
+- `tag` ∈ `new | refresh | exp | dsa` is computed by `TopicTagger` from the topic's scope
+  terms against the **confirmed** résumé skills: `dsa` category wins outright; an outright
+  mention of a skill beats one inferred from `library/skill-surface.json`; expert/advanced →
+  `exp`, otherwise `refresh`; no match → `new`. `skill-surface.json` lists each skill's
+  *established* surface only, so a 2023 API like virtual threads reads `new` rather than
+  being downgraded to a refresh of an 11-year Java claim.
+
+---
+
+## 3b. Plan-review audit (`POST /api/plan/audit`, no model call)
+
+`library/checklists/*.json` enumerates what a senior claim in a skill must survive. For every
+résumé skill claimed at expert/advanced, `CoverageAuditor` reports coverage % and the
+uncovered items; `PlanAuditService` places each gap in the earliest, least-loaded week that
+already teaches its category, and compares each week's `sum(est_minutes)` (or a 45-min
+nominal per un-deepened coarse topic) against `hours_per_week × 60`.
+
+Gaps are **suggestions only** — the review screen offers one-click insert, never a silent
+one. Drop a new JSON in the directory to audit another skill; no code changes.
 
 ---
 

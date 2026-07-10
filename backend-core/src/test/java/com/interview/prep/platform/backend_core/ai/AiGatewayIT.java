@@ -15,6 +15,7 @@ import com.interview.prep.platform.backend_core.study.Week;
 import com.interview.prep.platform.backend_core.study.WeekRepository;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -217,6 +218,7 @@ class AiGatewayIT extends IntegrationTestBase {
     @Test
     void seedPipeline_runsNarrativeDepthAndSupport() throws Exception {
         Topic coarse = createTopic("kafka-internals");
+        coarse.setTitle("Kafka internals");
         coarse.setAngle("partitions, ISR, exactly-once");
         coarse.setSplitHint("likely");
         topicRepository.save(coarse);
@@ -271,21 +273,81 @@ class AiGatewayIT extends IntegrationTestBase {
         }
         assertThat(state).isEqualTo("done");
 
-        Topic deepened = topicRepository.findByUserIdAndSlug(testUserId, "kafka-internals").orElseThrow();
+        // both children remember the coarse unit, and both are re-slugged from their FINAL
+        // titles — the coarse slug survives only as coarse_parent
+        List<Topic> children = topicRepository.findByUserId(testUserId).stream()
+                .filter(t -> "kafka-internals".equals(t.getCoarseParent()))
+                .sorted(java.util.Comparator.comparing(Topic::getId))
+                .toList();
+        assertThat(children).hasSize(2);
+        assertThat(topicRepository.findByUserIdAndSlug(testUserId, "kafka-internals")).isEmpty();
+
+        Topic deepened = children.get(0);
+        assertThat(deepened.getSlug()).isEqualTo("partitions-replicas-isr");
         assertThat(deepened.getConcept()).contains("ISR");
         assertThat(deepened.getEstMinutes()).isEqualTo(60);
         assertThat(deepened.getPoints()).contains("min.insync.replicas");
         assertThat(deepened.isNeedsReview()).isFalse();
 
-        Topic split = topicRepository.findByUserId(testUserId).stream()
-                .filter(t -> "kafka-internals".equals(t.getCoarseParent()))
-                .findFirst().orElseThrow();
+        Topic split = children.get(1);
         assertThat(split.getTitle()).contains("Exactly-once");
+        assertThat(split.getSlug()).isEqualTo("exactly-once-semantics-transactions");
 
         assertThat(weekRepository.findById(deepened.getWeek().getId()).orElseThrow().getBridge())
                 .contains("stops being magic");
         assertThat(phaseRepository.findByUserIdOrderByDisplayOrderAsc(testUserId).get(0).getBlurb())
                 .isEqualTo("The engine beneath everything else.");
+    }
+
+    @Test
+    @DisplayName("a depth pass that narrows a 3-mechanism unit is flagged, not silently accepted")
+    void seedPipeline_flagsNarrowedSplit() throws Exception {
+        Topic coarse = createTopic("java-concurrency");
+        coarse.setTitle("Java concurrency internals");
+        coarse.setAngle("ThreadPoolExecutor, CompletableFuture, locks");
+        coarse.setSplitHint("likely");
+        topicRepository.save(coarse);
+        String auth = bearer();
+
+        stubPost("/ai/narrative", Map.of("result", Map.of("phases", List.of(), "weeks", List.of()),
+                "meta", Map.of("model", "m", "cached", false, "tokens", 10, "cost", 0.0)));
+        stubPost("/ai/seed-plan", Map.of("result", Map.of("topics", List.of()),
+                "meta", Map.of("model", "m", "cached", false, "tokens", 10, "cost", 0.0)));
+
+        // the pass narrows: one card about the first mechanism, the other two dropped.
+        // The repair call gets the same stub back, so the scope stays unrecoverable.
+        Map<String, Object> narrowed = Map.of(
+                "parent", "java-concurrency", "title", "ThreadPoolExecutor internals",
+                "concept", "The executor decides task fate in a strict order: core thread, queue, max threads, then rejection handler.",
+                "points", List.of(
+                        "Executors.newFixedThreadPool uses an unbounded LinkedBlockingQueue.",
+                        "corePoolSize fills before the queue does.",
+                        "4 rejection policies, AbortPolicy is the default.",
+                        "allowCoreThreadTimeOut(true) reclaims idle core threads."),
+                "angle", "Why does newFixedThreadPool OOM under load?",
+                "est_minutes", 40);
+        stubPost("/ai/deep-dive", Map.of("result", Map.of("topics", List.of(narrowed)),
+                "meta", Map.of("model", "m", "cached", false, "tokens", 10, "cost", 0.0)));
+
+        mockMvc.perform(post("/api/ai/seed-plan").header("Authorization", auth))
+                .andExpect(status().isOk());
+
+        String state = "";
+        for (int i = 0; i < 50 && !"done".equals(state) && !"failed".equals(state); i++) {
+            Thread.sleep(200);
+            state = objectMapper.readTree(mockMvc.perform(get("/api/ai/seed-plan/status").header("Authorization", auth))
+                    .andReturn().getResponse().getContentAsString()).path("state").asText();
+        }
+        assertThat(state).isEqualTo("done");
+
+        List<Topic> children = topicRepository.findByUserId(testUserId).stream()
+                .filter(t -> "java-concurrency".equals(t.getCoarseParent()))
+                .toList();
+
+        // CompletableFuture and locks never made it into a card
+        assertThat(children).hasSize(1);
+        assertThat(children.get(0).getTitle()).isEqualTo("ThreadPoolExecutor internals");
+        assertThat(children.get(0).isNeedsReview()).isTrue();
     }
 
     // ── Desktop mode: pasted seed JSON persists through the same path ────────

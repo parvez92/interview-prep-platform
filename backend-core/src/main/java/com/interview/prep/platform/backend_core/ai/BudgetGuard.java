@@ -25,17 +25,22 @@ public class BudgetGuard {
                 .orElse("anthropic");
     }
 
-    private static final String DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+    // Tier-aware fallbacks for fresh settings rows with no model configured.
+    // The strong default must support adaptive thinking — the ai-service enables it
+    // for the quality-critical passes (plan/depth), and Haiku 4.5 rejects it.
+    private static final String DEFAULT_MODEL_STRONG = "claude-sonnet-5";
+    private static final String DEFAULT_MODEL_CHEAP = "claude-haiku-4-5-20251001";
 
     public String resolveModel(Long userId) {
-        UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
-        if (settings == null) return DEFAULT_MODEL;
         Tier tier = resolveTier(userId);
+        String fallback = tier == Tier.STRONG ? DEFAULT_MODEL_STRONG : DEFAULT_MODEL_CHEAP;
+        UserSettings settings = userSettingsRepository.findByUserId(userId).orElse(null);
+        if (settings == null) return fallback;
         String model = tier == Tier.STRONG
                 ? settings.getLlmModelStrong()
                 : settings.getLlmModelCheap();
         // fresh settings rows have no model configured yet — don't send a blank X-Model
-        return model != null && !model.isBlank() ? model : DEFAULT_MODEL;
+        return model != null && !model.isBlank() ? model : fallback;
     }
 
     public String resolveOllamaUrl(Long userId) {

@@ -16,6 +16,14 @@ Candidate confidence: {{ confidence }}/5
 {% endfor %}
 {% endif %}
 
+{% if weak_answers %}
+## Questions the Candidate Recently Answered Poorly (real interviews)
+These are verbatim from the candidate's interview log. Diagnose the most likely misconception behind each and make sure the primer closes that exact gap — explain the underlying mechanism they were missing, not just the definition:
+{% for wa in weak_answers %}
+- {{ wa }}
+{% endfor %}
+{% endif %}
+
 ## Task
 Return ONLY valid JSON — no markdown fences, no explanation:
 {"concept":"<markdown study primer>","points":["<key point>","..."],"angle":"<what interviewers test>"}

@@ -10,7 +10,7 @@ import { queryClient } from '@/lib/queryClient';
 import { Spinner } from '@/components/ui/Spinner';
 import { AnimeThinking } from '@/components/ui/AnimeThinking';
 import { DesktopPromptModal } from '@/components/ui/DesktopPromptModal';
-import type { ResumeProfile, OnboardingTargets, Phase, Week, TopicLite } from '@/types';
+import type { ResumeProfile, OnboardingTargets, Phase, Week, TopicLite, Source } from '@/types';
 import styles from './Onboarding.module.css';
 
 type ParseMode = 'api' | 'ollama' | 'desktop';
@@ -29,8 +29,9 @@ function normalizePlan(raw: unknown): Phase[] {
         slug:       slugify(String(t.title ?? 'topic')) + `-${pi}-${wi}-${ti}`,
         code:       `t-${pi}-${wi}-${ti}`,
         title:      String(t.title ?? 'Topic'),
+        // tag is assigned server-side against the résumé; source comes from the plan pass
         tag:        'new'  as const,
-        source:     'standard' as const,
+        source:     isSource(t.source) ? t.source : 'standard',
         status:     'todo' as const,
         confidence: null,
         resources_hint: typeof t.resources_hint === 'string' && t.resources_hint ? t.resources_hint : undefined,
@@ -58,6 +59,11 @@ function normalizePlan(raw: unknown): Phase[] {
 
 function slugify(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-');
+}
+
+const SOURCES: Source[] = ['resume', 'standard', 'interest', 'custom'];
+function isSource(v: unknown): v is Source {
+  return typeof v === 'string' && (SOURCES as string[]).includes(v);
 }
 
 const PARSE_MESSAGES = [
@@ -783,6 +789,21 @@ function TargetsStep({ targets, onChange, onBack, onNext, loading }: {
 }
 
 /* ── Step 3: Plan preview ─────────────────────────────────────────────────── */
+
+interface Suggestion {
+  id: string; label: string; skill: string; category: string;
+  phaseIndex: number; weekIndex: number; weekTitle: string;
+}
+interface SkillCoverage { skill: string; category: string; coveragePct: number; ready: boolean }
+interface WeekLoad {
+  phaseIndex: number; weekIndex: number; weekTitle: string;
+  plannedMinutes: number; budgetMinutes: number; estimated: boolean; over: boolean;
+}
+interface PlanAudit {
+  coverage: SkillCoverage[]; suggestions: Suggestion[];
+  weeks: WeekLoad[]; budgetMinutes: number; prepWeeks: number;
+}
+
 function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }: {
   plan:         Phase[];
   onBack:       () => void;
@@ -793,6 +814,41 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }
   const [plan, setPlan] = useState<Phase[]>(initialPlan);
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [seedViaDesktop, setSeedViaDesktop] = useState(false);
+  const [audit, setAudit] = useState<PlanAudit | null>(null);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  // Coverage + feasibility are deterministic and free — re-audit whenever the plan changes.
+  useEffect(() => {
+    let stale = false;
+    api.post<PlanAudit>('/plan/audit', { phases: plan })
+      .then(res => { if (!stale) setAudit(res.data); })
+      .catch(() => { if (!stale) setAudit(null); });
+    return () => { stale = true; };
+  }, [plan]);
+
+  /** Accepting a suggestion inserts the coarse topic; the seed pipeline deepens it on commit. */
+  const acceptSuggestion = (s: Suggestion) => {
+    const newTopic: TopicLite = {
+      slug:       slugify(s.label) + `-c${Date.now()}`,
+      code:       `t-c${Date.now()}`,
+      title:      s.label,
+      tag:        'new',
+      source:     'standard',
+      status:     'todo',
+      confidence: null,
+      category:   s.category,
+      scope:      `Checklist gap for ${s.skill}: ${s.label}. Cover at senior interview depth.`,
+      split_hint: 'maybe',
+    };
+    setPlan(prev => prev.map((phase, p) => {
+      if (p !== s.phaseIndex) return phase;
+      const weeks = phase.weeks.map((week, w) =>
+        w === s.weekIndex ? { ...week, topics: [...week.topics, newTopic] } : week);
+      const total = weeks.reduce((acc, wk) => acc + wk.topics.length, 0);
+      return { ...phase, weeks, progress: { ...phase.progress, total } };
+    }));
+    setDismissed(prev => new Set(prev).add(s.id));
+  };
 
   const removeTopic = (pi: number, wi: number, ti: number) => {
     setPlan(prev => prev.map((phase, p) => {
@@ -855,6 +911,13 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }
           {loading ? <Spinner size={13} /> : <IconRefresh size={13} />} Regenerate
         </button>
       </div>
+
+      <CoveragePanel
+        audit={audit}
+        dismissed={dismissed}
+        onAccept={acceptSuggestion}
+        onDismiss={id => setDismissed(prev => new Set(prev).add(id))}
+      />
 
       <div className={styles.planList}>
         {plan.map((phase, pi) => (
@@ -925,6 +988,79 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }
           Commit plan — start prep!
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ── Plan-review coverage audit ───────────────────────────────────────────── */
+/**
+ * Deterministic audit of the draft plan: which checklist items a claimed-expert skill
+ * is missing, and which weeks exceed the study budget. Suggestions are opt-in — nothing
+ * is inserted unless the user clicks Add.
+ */
+function CoveragePanel({ audit, dismissed, onAccept, onDismiss }: {
+  audit:     PlanAudit | null;
+  dismissed: Set<string>;
+  onAccept:  (s: Suggestion) => void;
+  onDismiss: (id: string) => void;
+}) {
+  if (!audit) return null;
+
+  const open = audit.suggestions.filter(s => !dismissed.has(s.id));
+  const overloaded = audit.weeks.filter(w => w.over);
+  const weak = audit.coverage.filter(c => !c.ready);
+  if (!audit.coverage.length) return null;
+
+  return (
+    <div className={styles.auditPanel}>
+      <div className={styles.auditRow}>
+        {audit.coverage.map(c => (
+          <span key={c.skill} className={`badge ${c.ready ? 'badge-green' : 'badge-amber'}`}>
+            {c.skill} coverage {c.coveragePct}%
+          </span>
+        ))}
+      </div>
+
+      {weak.length > 0 && (
+        <p className={styles.auditNote}>
+          At {audit.prepWeeks} weeks, {weak.map(c => `${c.skill} is ${c.coveragePct}%`).join(' and ')} covered
+          against the senior checklist. Add the gaps below, or extend your prep window.
+        </p>
+      )}
+
+      {open.length > 0 && (
+        <div className={styles.chipList}>
+          {open.map(s => (
+            <span key={s.id} className="badge badge-neutral" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              {s.label}
+              <button
+                onClick={() => onAccept(s)}
+                title={`Add to ${s.weekTitle}`}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 1px', lineHeight: 1, color: 'inherit', display: 'flex' }}
+              >
+                <IconPlus size={11} />
+              </button>
+              <button
+                onClick={() => onDismiss(s.id)}
+                title="Not needed"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 1px', lineHeight: 1, color: 'inherit', opacity: .55, display: 'flex' }}
+              >
+                <IconX size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {overloaded.length > 0 && (
+        <p className={styles.auditNote}>
+          {overloaded.length} week{overloaded.length > 1 ? 's exceed' : ' exceeds'} your{' '}
+          {Math.round(audit.budgetMinutes / 60)}h/week budget
+          {overloaded[0].estimated ? ' (estimated — real effort is known after seeding)' : ''}:{' '}
+          {overloaded.slice(0, 3).map(w => w.weekTitle).join(', ')}
+          {overloaded.length > 3 ? '…' : ''}
+        </p>
+      )}
     </div>
   );
 }

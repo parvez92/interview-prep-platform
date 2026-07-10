@@ -6,6 +6,8 @@ import com.interview.prep.platform.backend_core.content.ContentService;
 import com.interview.prep.platform.backend_core.content.dto.ExerciseDto;
 import com.interview.prep.platform.backend_core.content.dto.QuestionDto;
 import com.interview.prep.platform.backend_core.content.dto.ResourceDto;
+import com.interview.prep.platform.backend_core.interview.ReviewFlag;
+import com.interview.prep.platform.backend_core.interview.ReviewFlagRepository;
 import com.interview.prep.platform.backend_core.study.Phase;
 import com.interview.prep.platform.backend_core.study.PhaseRepository;
 import com.interview.prep.platform.backend_core.study.StudyService;
@@ -41,6 +43,7 @@ public class AiGatewayService {
     private final UserSettingsRepository userSettingsRepository;
     private final ResumeProfileRepository resumeProfileRepository;
     private final PhaseRepository phaseRepository;
+    private final ReviewFlagRepository reviewFlagRepository;
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> generateForTab(Long userId, String slug, String tab) {
@@ -59,6 +62,11 @@ public class AiGatewayService {
         payload.put("confidence", topic.getConfidence() != null ? topic.getConfidence() : 3);
         payload.put("skills", skillSummaries(loadProfile(userId)));
         payload.put("angle", topic.getAngle() != null ? topic.getAngle() : "");
+        // Unresolved feedback-loop flags ride along so a newly flagged topic regenerates
+        // its guide (they're part of the ai-service cache key) with the gap called out.
+        payload.put("review_reasons", reviewFlagRepository
+                .findByUserIdAndTopicIdAndResolved(userId, topic.getId(), false)
+                .stream().map(ReviewFlag::getReason).filter(java.util.Objects::nonNull).toList());
 
         Map<String, Object> response = aiClient.post(userId, "/ai/guide", payload, "guide-" + tab);
         Object result = response.get("result");

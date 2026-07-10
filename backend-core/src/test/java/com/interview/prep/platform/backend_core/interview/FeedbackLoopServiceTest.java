@@ -1,5 +1,6 @@
 package com.interview.prep.platform.backend_core.interview;
 
+import com.interview.prep.platform.backend_core.ai.AiClient;
 import com.interview.prep.platform.backend_core.study.Topic;
 import com.interview.prep.platform.backend_core.study.TopicRepository;
 import org.junit.jupiter.api.Test;
@@ -10,10 +11,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,6 +27,7 @@ class FeedbackLoopServiceTest {
 
     @Mock ReviewFlagRepository flagRepository;
     @Mock TopicRepository topicRepository;
+    @Mock AiClient aiClient;
     @InjectMocks FeedbackLoopService service;
 
     private InterviewQuestion question(int rating, Long topicId) {
@@ -92,6 +99,51 @@ class FeedbackLoopServiceTest {
         InterviewQuestion q = question(1, null);
         service.handleRating(q, "Acme");
         verifyNoInteractions(flagRepository, topicRepository);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void lowRating_embedsWeakAnswer() {
+        InterviewQuestion q = question(1, 5L);
+        q.setId(42L);
+        Topic topic = new Topic(); topic.setConfidence(80);
+        when(topicRepository.findById(5L)).thenReturn(Optional.of(topic));
+        when(flagRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(topicRepository.save(any())).thenReturn(topic);
+
+        service.handleRating(q, "Acme");
+
+        ArgumentCaptor<Map<String, Object>> captor = ArgumentCaptor.forClass(Map.class);
+        verify(aiClient).post(eq(1L), eq("/ai/embed-weak-answer"), captor.capture(), eq("embed-weak-answer"));
+        assertThat(captor.getValue().get("question_id")).isEqualTo(42L);
+        assertThat((String) captor.getValue().get("text")).contains("Q").contains("Acme");
+    }
+
+    @Test
+    void highRating_removesWeakAnswerEmbedding() {
+        InterviewQuestion q = question(4, 5L);
+        q.setId(42L);
+        when(flagRepository.findByUserIdAndTopicIdAndResolved(1L, 5L, false)).thenReturn(List.of());
+
+        service.handleRating(q, "Acme");
+
+        verify(aiClient).post(eq(1L), eq("/ai/delete-weak-answer"), eq(Map.of("question_id", 42L)), eq("delete-weak-answer"));
+        verify(aiClient, never()).post(anyLong(), eq("/ai/embed-weak-answer"), any(), anyString());
+    }
+
+    @Test
+    void aiServiceDown_doesNotBreakFlagCreation() {
+        InterviewQuestion q = question(1, 5L);
+        q.setId(42L);
+        Topic topic = new Topic(); topic.setConfidence(80);
+        when(topicRepository.findById(5L)).thenReturn(Optional.of(topic));
+        when(flagRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(topicRepository.save(any())).thenReturn(topic);
+        when(aiClient.post(anyLong(), anyString(), any(), anyString()))
+                .thenThrow(new RuntimeException("ai-service unreachable"));
+
+        assertThatCode(() -> service.handleRating(q, "Acme")).doesNotThrowAnyException();
+        verify(flagRepository).save(any());
     }
 
     @Test

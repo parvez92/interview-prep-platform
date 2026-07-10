@@ -21,3 +21,5 @@ e2e/playwright-report/
 # personal reference material
 docs/interview-prep-tracker.html
 docs/*.png
+docs/*.md
+*.egg-info/

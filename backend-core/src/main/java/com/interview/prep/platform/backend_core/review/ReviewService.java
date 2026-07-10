@@ -106,8 +106,10 @@ public class ReviewService {
         List<ReviewFlag> flags = flagRepository.findByUserIdAndTopicIdAndResolved(userId, topic.getId(), false);
         flags.forEach(f -> f.setResolved(true));
         flagRepository.saveAll(flags);
-        // Bump confidence and stamp
+        // Bump confidence and stamp. Without the status flip the row stays `todo` while
+        // carrying review state, which reads as a topic that was never studied.
         int conf = topic.getConfidence() != null ? topic.getConfidence() : 0;
+        topic.setStatus("done");
         topic.setConfidence(Math.min(100, conf + 20));
         topic.setLastReviewedAt(Instant.now());
         topicRepository.save(topic);

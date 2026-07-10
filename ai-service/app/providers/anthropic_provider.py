@@ -15,6 +15,18 @@ from app.providers.base import (
 
 log = logging.getLogger(__name__)
 
+# Adaptive thinking is only accepted on these model families — sending it to
+# anything else (Haiku 4.5, Sonnet/Opus 4.5 and older) is a 400.
+_ADAPTIVE_THINKING_MODELS = (
+    "claude-opus-4-6", "claude-opus-4-7", "claude-opus-4-8",
+    "claude-sonnet-4-6", "claude-sonnet-5",
+    "claude-fable-5", "claude-mythos-5",
+)
+
+
+def _supports_adaptive_thinking(model: str) -> bool:
+    return model.startswith(_ADAPTIVE_THINKING_MODELS)
+
 
 class AnthropicProvider(LLMProvider):
     def __init__(self, api_key: str, voyage_key: str, model: str = "claude-opus-4-8") -> None:
@@ -37,7 +49,10 @@ class AnthropicProvider(LLMProvider):
         if system:
             kwargs["system"] = system
         if use_thinking:
-            kwargs["thinking"] = {"type": "adaptive"}
+            if _supports_adaptive_thinking(self._model):
+                kwargs["thinking"] = {"type": "adaptive"}
+            else:
+                log.info("thinking requested but %s does not support adaptive — running without", self._model)
 
         async with self._client.messages.stream(**kwargs) as stream:
             msg = await stream.get_final_message()

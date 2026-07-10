@@ -36,13 +36,14 @@ Work experience — use to gauge real-world depth and which technologies are alr
 
 ## Output — return ONLY valid JSON, no fences, no explanations.
 Emit COMPACT JSON on a single line — no indentation, no newlines between keys. Pretty-printing doubles the output length and risks truncation.
-{"phases":[{"name":"Phase name","weeks":<int>,"goal":"<2-3 sentences: why this phase NOW, and what it unlocks for the phases after it>","weeks_detail":[{"week_number":<int>,"title":"<week theme, <=60 chars, e.g. 'JVM, memory, GC & profiling'>","coarse_topics":[{"title":"<study unit>","category":"dsa|system_design|behavioral|language|framework|cloud|domain","priority":"high|medium|low","scope":"<1 line: what this covers and roughly how deep>","split_hint":"none|maybe|likely"}]}]}]}
+{"phases":[{"name":"Phase name","weeks":<int>,"goal":"<2-3 sentences: why this phase NOW, and what it unlocks for the phases after it>","weeks_detail":[{"week_number":<int>,"title":"<week theme, <=60 chars, e.g. 'JVM, memory, GC & profiling'>","coarse_topics":[{"title":"<study unit>","category":"dsa|system_design|behavioral|language|framework|cloud|domain","source":"resume|standard|interest","priority":"high|medium|low","scope":"<1 line: what this covers and roughly how deep>","split_hint":"none|maybe|likely"}]}]}]}
 
 Constraints:
 - Total weeks across all phases = exactly {{ targets.prepWeeks if targets.prepWeeks is defined else "12" }}.
-- 3-5 COARSE topics per week. A coarse topic is a study unit a later depth pass may expand into 1-3 concrete subtopics — scope them like chapter sections, not leaf bullets.
+- 3-5 COARSE topics per week, except the Phase 1 skills audit which may carry 5-8 — auditing a decade of claimed expertise needs the room. A coarse topic is a study unit a later depth pass may expand into 1-3 concrete subtopics — scope them like chapter sections, not leaf bullets.
 - `split_hint`: "likely" for broad units containing multiple interview-distinct subtopics (e.g. "Kafka internals"), "none" for atomic ones (e.g. "Two-pointer patterns"), "maybe" in between.
-- `scope` is the contract with the depth pass: one line saying what to cover and how deep.
+- `source` records WHY you added the unit: `resume` (it is on their stack / in their experience), `standard` (a pillar every candidate for this role must cover), `interest` (a supplementary add-on they asked for). Be honest — this drives how the UI badges the topic.
+- `scope` is the contract with the depth pass: one line saying what to cover and how deep. Every technology you name in a title or scope line WILL be checked for in the generated content — do not name what you do not want taught.
 - Every week has a `title`: a coherent theme that its topics genuinely share, phrased like a chapter heading — not "Week 3".
 - Phase `goal` should read like a syllabus introduction: why this phase now, what it unlocks later, and — where natural — how it connects to the candidate's own background.
 - Phase 1 MUST be "Technical Skills Depth Review" — mandatory skills audit of the candidate's existing stack.

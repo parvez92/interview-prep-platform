@@ -2,6 +2,8 @@ package com.interview.prep.platform.backend_core.onboarding;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.interview.prep.platform.backend_core.ai.AiClient;
+import com.interview.prep.platform.backend_core.ai.ProfileSkills;
+import com.interview.prep.platform.backend_core.ai.TopicTagger;
 import com.interview.prep.platform.backend_core.common.error.ApiException;
 import com.interview.prep.platform.backend_core.common.error.ErrorCode;
 import com.interview.prep.platform.backend_core.content.Exercise;
@@ -54,6 +56,11 @@ public class OnboardingService {
     private final ExerciseRepository exerciseRepository;
     private final EntityManager em;
     private final ObjectMapper objectMapper;
+    private final TopicTagger topicTagger;
+
+    /** Why a coarse topic is in the plan. The plan pass emits the first three; the review screen adds `custom`. */
+    private static final java.util.Set<String> PLAN_SOURCES =
+            java.util.Set.of("resume", "standard", "interest", "custom");
 
     @Transactional
     @SneakyThrows
@@ -222,6 +229,7 @@ public class OnboardingService {
         userSettingsRepository.save(settings);
 
         // 2. Persist Phase → Week → Topic records (replace any existing plan)
+        List<ProfileSkills.Skill> skills = ProfileSkills.from(profile, objectMapper);
         List<Map<String, Object>> phasesData =
                 (List<Map<String, Object>>) body.get("phases");
         if (phasesData != null && !phasesData.isEmpty()) {
@@ -266,15 +274,16 @@ public class OnboardingService {
                         topic.setTitle(title);
                         topic.setSlug(uniqueSlug(userId, title));
                         topic.setCode("t-" + System.nanoTime());
-                        topic.setSource("ai-generated");
+                        // why the plan added this unit — the plan pass knows, we don't re-derive it
+                        topic.setSource(planSource(td));
                         topic.setStatus("todo");
-                        topic.setTag("new");
                         String category = str(td, "category", null);
                         if (category != null && !category.isBlank()) topic.setCategory(category);
                         topic.setDisplayOrder(topicOrd++);
                         // v2 plans send "scope"; older shapes used resources_hint/angle
                         String hint = str(td, "scope", str(td, "resources_hint", str(td, "angle", null)));
                         if (hint != null) topic.setAngle(hint);
+                        topic.setTag(topicTagger.tag(category, title, hint, skills));
                         String splitHint = str(td, "split_hint", null);
                         if (splitHint != null && !splitHint.isBlank()) topic.setSplitHint(splitHint);
                         topicRepository.save(topic);
@@ -289,6 +298,18 @@ public class OnboardingService {
     }
 
     // ── helpers ────────────────────────────────────────────────────────────────
+
+    /**
+     * `source` explains why a topic is in the plan: derived from the résumé, a standard
+     * pillar, or a supplementary interest. User-added topics are tagged `custom` by
+     * StudyService. An unrecognised value falls back to `standard` rather than being
+     * stored verbatim.
+     */
+    private static String planSource(Map<String, Object> td) {
+        String raw = str(td, "source", "").strip().toLowerCase(java.util.Locale.ROOT);
+        if (PLAN_SOURCES.contains(raw)) return raw;
+        return "standard";
+    }
 
     private void persistTopicContent(Long userId, Long topicId, Map<String, Object> td) {
         if (td.get("resources") instanceof List<?> rawRes) {

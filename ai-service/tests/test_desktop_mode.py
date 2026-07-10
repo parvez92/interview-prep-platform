@@ -55,13 +55,11 @@ async def test_desktop_response_shape(client):
     )
     body = resp.json()
     assert "meta" in body
-    assert body["meta"]["model"] == "claude-desktop"
+    assert body["meta"]["model"] == "desktop"
     assert body["meta"]["cost"] == 0.0
-    assert "desktop" in body
-    assert "mcp_sse_url" in body["desktop"]
-    assert "tools" in body["desktop"]
-    assert len(body["desktop"]["tools"]) > 0
-    assert "suggestion" in body["desktop"]
+    assert body["mode"] == "desktop"
+    assert isinstance(body["desktop_prompt"], str) and body["desktop_prompt"]
+    assert body["result"] is None
 
 
 async def test_desktop_does_not_intercept_settings(client):
