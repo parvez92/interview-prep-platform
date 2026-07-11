@@ -10,7 +10,7 @@ import { queryClient } from '@/lib/queryClient';
 import { Spinner } from '@/components/ui/Spinner';
 import { AnimeThinking } from '@/components/ui/AnimeThinking';
 import { DesktopPromptModal } from '@/components/ui/DesktopPromptModal';
-import type { ResumeProfile, OnboardingTargets, Phase, Week, TopicLite, Source } from '@/types';
+import type { ResumeProfile, OnboardingTargets, Phase, Week, TopicLite, Source, Priority } from '@/types';
 import styles from './Onboarding.module.css';
 
 type ParseMode = 'api' | 'ollama' | 'desktop';
@@ -32,6 +32,7 @@ function normalizePlan(raw: unknown): Phase[] {
         // tag is assigned server-side against the résumé; source comes from the plan pass
         tag:        'new'  as const,
         source:     isSource(t.source) ? t.source : 'standard',
+        priority:   isPriority(t.priority) ? t.priority : 'high',
         status:     'todo' as const,
         confidence: null,
         resources_hint: typeof t.resources_hint === 'string' && t.resources_hint ? t.resources_hint : undefined,
@@ -64,6 +65,11 @@ function slugify(s: string): string {
 const SOURCES: Source[] = ['resume', 'standard', 'interest', 'custom'];
 function isSource(v: unknown): v is Source {
   return typeof v === 'string' && (SOURCES as string[]).includes(v);
+}
+
+const PRIORITIES: Priority[] = ['high', 'medium', 'low'];
+function isPriority(v: unknown): v is Priority {
+  return typeof v === 'string' && (PRIORITIES as string[]).includes(v);
 }
 
 const PARSE_MESSAGES = [
@@ -834,6 +840,7 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }
       title:      s.label,
       tag:        'new',
       source:     'standard',
+      priority:   'high',
       status:     'todo',
       confidence: null,
       category:   s.category,
@@ -873,6 +880,7 @@ function PlanStep({ plan: initialPlan, onBack, onCommit, onRegenerate, loading }
       title,
       tag:        'new',
       source:     'custom',
+      priority:   'high',
       status:     'todo',
       confidence: null,
     };

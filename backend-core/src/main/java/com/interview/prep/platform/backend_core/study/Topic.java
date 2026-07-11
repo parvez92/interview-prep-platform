@@ -42,6 +42,10 @@ public class Topic {
     @Column(nullable = false)
     private String source = "standard";
 
+    /** high|medium|low — plan priority; drives skip semantics and behind-pace queue exclusion */
+    @Column(nullable = false)
+    private String priority = "high";
+
     @Column(columnDefinition = "text")
     private String concept;
 

@@ -212,6 +212,85 @@ class StudyPlanIT extends IntegrationTestBase {
                 .andExpect(jsonPath("$.confidence").value(4));
     }
 
+    // ── priority (plan amendment 01 §1) ──────────────────────────────────────
+
+    @Test
+    void getPhases_topicCarriesDefaultHighPriority() throws Exception {
+        mockMvc.perform(get("/api/phases").header("Authorization", bearer()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].weeks[0].topics[0].priority").value("high"));
+    }
+
+    @Test
+    void patchTopic_setPriority_persists() throws Exception {
+        mockMvc.perform(patch("/api/topics/arrays")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("priority", "low"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priority").value("low"));
+    }
+
+    @Test
+    void createTopic_byWeekNumber_withSourceAndPriority() throws Exception {
+        // the seeded week is "W1" (no global number); give the topic a resolvable coded week
+        var week = new Week();
+        week.setUserId(testUserId);
+        week.setPhase(testPhase);
+        week.setCode("w-1-14");
+        week.setTitle("Week 14 — DSA");
+        week.setDisplayOrder(2);
+        weekRepository.save(week);
+
+        String body = objectMapper.writeValueAsString(Map.of(
+                "weekNumber", 14,
+                "title", "Low-level design & design patterns",
+                "tag", "new",
+                "source", "standard",
+                "priority", "high",
+                "scope", "SOLID live, GoF patterns, machine-coding staples"));
+
+        mockMvc.perform(post("/api/topics")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.source").value("standard"))
+                .andExpect(jsonPath("$.priority").value("high"))
+                .andExpect(jsonPath("$.isCustom").value(false))
+                .andExpect(jsonPath("$.deepDive.angle").value(org.hamcrest.Matchers.containsString("SOLID")));
+    }
+
+    @Test
+    void createTopic_longTitle_doesNotOverflowCodeColumn() throws Exception {
+        // code is varchar(40); a long amendment title must not be used to derive it
+        String longTitle = "Low-level design & design patterns — SOLID live, machine-coding round";
+        mockMvc.perform(post("/api/topics")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "weekCode", "W1", "title", longTitle, "tag", "new"))))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value(longTitle));
+    }
+
+    @Test
+    void createTopic_bareUserAdd_defaultsCustomHigh() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "weekCode", "W1",
+                "title", "My own scratch topic",
+                "tag", "new"));
+
+        mockMvc.perform(post("/api/topics")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.source").value("custom"))
+                .andExpect(jsonPath("$.priority").value("high"))
+                .andExpect(jsonPath("$.isCustom").value(true));
+    }
+
     // ── GET /api/progress ───────────────────────────────────────────────────
 
     @Test

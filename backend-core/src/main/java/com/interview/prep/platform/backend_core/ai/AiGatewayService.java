@@ -185,7 +185,7 @@ public class AiGatewayService {
                         ? l.stream().map(Object::toString).toList() : List.of();
                 String angle = strOrNull(result, "angle");
                 studyService.updateTopic(userId, slug,
-                        new UpdateTopicDto(null, null, null, concept, points.isEmpty() ? null : points, angle, null));
+                        new UpdateTopicDto(null, null, null, concept, points.isEmpty() ? null : points, angle, null, null));
             }
             case "resources" -> {
                 List<Map<String, Object>> items = (List<Map<String, Object>>) result.get("resources");
@@ -201,7 +201,7 @@ public class AiGatewayService {
                 if (items == null) return;
                 List<ExerciseDto> dtos = items.stream()
                         .map(e -> new ExerciseDto(null, str(e, "title"), str(e, "repoUrl"), false, 0,
-                                e.get("est_minutes") instanceof Number n ? n.intValue() : null))
+                                intOrNull(e, "est_minutes", "estMinutes")))
                         .filter(d -> !d.title().isBlank())
                         .toList();
                 if (!dtos.isEmpty()) contentService.replaceAiExercises(userId, slug, dtos);
@@ -347,5 +347,17 @@ public class AiGatewayService {
     private static String strOrNull(Map<?, ?> m, String key) {
         Object v = m.get(key);
         return v instanceof String s && !s.isBlank() ? s : null;
+    }
+
+    /**
+     * First key that holds a number wins. The Python seed emits snake_case (est_minutes);
+     * hand-authored seed files follow the DTO's camelCase (estMinutes). Accept both so
+     * neither source silently drops the value.
+     */
+    private static Integer intOrNull(Map<?, ?> m, String... keys) {
+        for (String key : keys) {
+            if (m.get(key) instanceof Number n) return n.intValue();
+        }
+        return null;
     }
 }

@@ -37,6 +37,8 @@ public class ReviewService {
 
     private static final int DEFAULT_EST_MINUTES = 45;
     private static final int STUDY_DAYS_PER_WEEK = 6;
+    /** Once this far behind, drop optional (low-priority) topics from the queue to free the core. */
+    private static final int BEHIND_PACE_DROP_LOW_DAYS = 5;
 
     private final TopicRepository topicRepository;
     private final ReviewFlagRepository flagRepository;
@@ -76,9 +78,13 @@ public class ReviewService {
         long daysElapsed = Math.max(0, ChronoUnit.DAYS.between(planStart, Instant.now()));
         int weekIdx = (int) Math.min(daysElapsed / 7, weekIds.size() - 1L);
         Long currentWeekId = weekIds.get(weekIdx);
+        // when the plan has slipped, optional topics come out of the queue so the budget goes
+        // to the interview core — they stay visible in the week view, just not scheduled today
+        boolean dropLow = behindDays(all, planStart, weekIds.size()) >= BEHIND_PACE_DROP_LOW_DAYS;
         for (Topic t : all) {
             if (planned[0] >= budgetMin) break;
             if (!t.getWeek().getId().equals(currentWeekId) || !"todo".equals(t.getStatus())) continue;
+            if (dropLow && "low".equalsIgnoreCase(t.getPriority())) continue;
             add(queue, planned, new ReviewItemDto("new", t.getSlug(), t.getTitle(),
                     "week " + (weekIdx + 1) + " of your plan", est(t)));
         }
@@ -95,7 +101,7 @@ public class ReviewService {
         }
 
         return new TodayQueueDto(List.copyOf(queue.values()), budgetMin, planned[0],
-                velocity(all, planStart, weekIds.size()));
+                velocityLabel(behindDays(all, planStart, weekIds.size())));
     }
 
     @Transactional
@@ -135,13 +141,17 @@ public class ReviewService {
         return (int) Math.max(0, conf - Math.max(0, days - 7));
     }
 
-    private String velocity(List<Topic> all, Instant planStart, int totalWeeks) {
+    /** Days behind the even-pace expectation; ≤ 0 means on or ahead of pace. */
+    private long behindDays(List<Topic> all, Instant planStart, int totalWeeks) {
         long done = all.stream().filter(t -> "done".equals(t.getStatus())).count();
         double weeksElapsed = Math.min(totalWeeks,
                 Math.max(0, ChronoUnit.DAYS.between(planStart, Instant.now())) / 7.0);
         double expected = weeksElapsed * ((double) all.size() / Math.max(1, totalWeeks));
         double perDay = (double) all.size() / Math.max(1, totalWeeks * 7L);
-        long behindDays = Math.round((expected - done) / Math.max(perDay, 0.01));
+        return Math.round((expected - done) / Math.max(perDay, 0.01));
+    }
+
+    private String velocityLabel(long behindDays) {
         return behindDays <= 0 ? "on pace" : "~" + behindDays + " day" + (behindDays == 1 ? "" : "s") + " behind";
     }
 }

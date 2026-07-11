@@ -6,6 +6,7 @@ public record TopicSummaryDto(
         String title,
         String tag,
         String source,
+        String priority,
         String status,
         Integer confidence
 ) {}

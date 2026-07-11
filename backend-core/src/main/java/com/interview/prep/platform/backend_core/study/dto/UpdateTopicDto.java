@@ -9,5 +9,6 @@ public record UpdateTopicDto(
         String concept,
         List<String> points,
         String angle,
-        Integer confidence
+        Integer confidence,
+        String priority
 ) {}

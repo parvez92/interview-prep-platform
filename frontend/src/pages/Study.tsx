@@ -5,7 +5,7 @@ import {
   IconCircle, IconPlus,
 } from '@tabler/icons-react';
 import { usePhases } from '@/hooks/usePhases';
-import { TagChip, SourceChip } from '@/components/ui/TagChip';
+import { TagChip, SourceChip, PriorityChip, priorityTooltip } from '@/components/ui/TagChip';
 import { PageSpinner } from '@/components/ui/Spinner';
 import type { Phase, Week, TopicLite } from '@/types';
 import styles from './Study.module.css';
@@ -115,10 +115,12 @@ function TopicRow({ topic }: { topic: TopicLite }) {
         {done
           ? <IconCircleCheck size={15} style={{ color: 'var(--green)', flexShrink: 0 }} />
           : <IconCircle      size={15} style={{ color: 'var(--ink-4)', flexShrink: 0 }} />}
-        <span className={`${styles.topicName} ${done ? styles.topicDone : ''}`} title={topic.title}>
+        <span className={`${styles.topicName} ${done ? styles.topicDone : ''}`}
+              title={priorityTooltip(topic.priority) ?? topic.title}>
           {topic.title}
         </span>
         <div className={styles.topicChips}>
+          <PriorityChip priority={topic.priority} />
           <SourceChip source={topic.source} />
           <TagChip tag={topic.tag} />
         </div>

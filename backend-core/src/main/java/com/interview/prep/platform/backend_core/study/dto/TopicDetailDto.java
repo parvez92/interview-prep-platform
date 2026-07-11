@@ -15,6 +15,7 @@ public record TopicDetailDto(
         String title,
         String tag,
         String source,
+        String priority,
         String status,
         boolean isCustom,
         Integer confidence,

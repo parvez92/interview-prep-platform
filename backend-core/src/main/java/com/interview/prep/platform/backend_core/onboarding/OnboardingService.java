@@ -259,11 +259,18 @@ public class OnboardingService {
                     if (weekTitle.isBlank() || weekTitle.startsWith("Week ")) weekTitle = "Week " + weekNum;
                     else weekTitle = "Week " + weekNum + " — " + (weekTitle.length() > 150 ? weekTitle.substring(0, 150) : weekTitle);
                     week.setTitle(weekTitle);
+                    // a hand-authored plan carries its own narrative; the narrative pass
+                    // would otherwise be the only writer of these
+                    week.setBridge(strOrNull(wd, "bridge"));
+                    week.setAnchor(strOrNull(wd, "anchor"));
+                    week.setUnlocks(strOrNull(wd, "unlocks"));
                     week.setDisplayOrder(weekOrd++);
                     week = weekRepository.save(week);
 
+                    // v2 plans emit "coarse_topics"; the frontend normalises them to "topics"
+                    Object rawTopics = wd.get("coarse_topics") != null ? wd.get("coarse_topics") : wd.get("topics");
                     List<Map<String, Object>> topicsData =
-                            (List<Map<String, Object>>) wd.getOrDefault("topics", List.of());
+                            rawTopics instanceof List<?> l ? (List<Map<String, Object>>) l : List.of();
                     int topicOrd = 0;
                     for (Map<String, Object> td : topicsData) {
                         String title = str(td, "title", "Topic");
@@ -276,6 +283,7 @@ public class OnboardingService {
                         topic.setCode("t-" + System.nanoTime());
                         // why the plan added this unit — the plan pass knows, we don't re-derive it
                         topic.setSource(planSource(td));
+                        topic.setPriority(planPriority(td));
                         topic.setStatus("todo");
                         String category = str(td, "category", null);
                         if (category != null && !category.isBlank()) topic.setCategory(category);
@@ -309,6 +317,15 @@ public class OnboardingService {
         String raw = str(td, "source", "").strip().toLowerCase(java.util.Locale.ROOT);
         if (PLAN_SOURCES.contains(raw)) return raw;
         return "standard";
+    }
+
+    /** Plan priority (high|medium|low); anything unrecognised is the interview core → high. */
+    private static String planPriority(Map<String, Object> td) {
+        String raw = str(td, "priority", "").strip().toLowerCase(java.util.Locale.ROOT);
+        return switch (raw) {
+            case "medium", "low" -> raw;
+            default -> "high";
+        };
     }
 
     private void persistTopicContent(Long userId, Long topicId, Map<String, Object> td) {
@@ -377,6 +394,11 @@ public class OnboardingService {
             return (List<Map<String, Object>>) list;
         }
         return List.of();
+    }
+
+    /** Optional free text: absent, blank or non-string all mean "not authored". */
+    private static String strOrNull(Map<String, Object> m, String key) {
+        return m.get(key) instanceof String s && !s.isBlank() ? s : null;
     }
 
     private static String str(Map<String, Object> m, String key, String def) {

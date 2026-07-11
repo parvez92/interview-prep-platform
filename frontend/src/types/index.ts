@@ -1,6 +1,7 @@
 /* ── Shared primitives ──────────────────────────────────────────────────── */
-export type Tag    = 'new' | 'refresh' | 'dsa' | 'exp';
-export type Source = 'resume' | 'standard' | 'interest' | 'custom';
+export type Tag      = 'new' | 'refresh' | 'dsa' | 'exp';
+export type Source   = 'resume' | 'standard' | 'interest' | 'custom';
+export type Priority = 'high' | 'medium' | 'low';
 
 /* ── Study plan ─────────────────────────────────────────────────────────── */
 export interface Phase {
@@ -28,6 +29,7 @@ export interface TopicLite {
   title:      string;
   tag:        Tag;
   source:     Source;
+  priority:   Priority;
   status:     'todo' | 'done';
   confidence: number | null;
   /** snake_case: must match the AI plan JSON key that commitPlan maps to topic.angle */

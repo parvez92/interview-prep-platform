@@ -4,6 +4,8 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
 import com.interview.prep.platform.backend_core.IntegrationTestBase;
+import com.interview.prep.platform.backend_core.content.Exercise;
+import com.interview.prep.platform.backend_core.content.ExerciseRepository;
 import com.interview.prep.platform.backend_core.content.Question;
 import com.interview.prep.platform.backend_core.content.QuestionRepository;
 import com.interview.prep.platform.backend_core.interview.ReviewFlagRepository;
@@ -59,6 +61,7 @@ class AiGatewayIT extends IntegrationTestBase {
     @Autowired private WeekRepository weekRepository;
     @Autowired private TopicRepository topicRepository;
     @Autowired private QuestionRepository questionRepository;
+    @Autowired private ExerciseRepository exerciseRepository;
     @Autowired private ReviewFlagRepository reviewFlagRepository;
 
     @DynamicPropertySource
@@ -373,6 +376,30 @@ class AiGatewayIT extends IntegrationTestBase {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isUnprocessableEntity());
+    }
+
+    @Test
+    @DisplayName("manual seed persists exercise est-minutes under either casing")
+    void seedPlanManual_acceptsBothEstMinutesCasings() throws Exception {
+        Topic topic = createTopic("est-casing");
+
+        // Python AI seed emits snake_case; hand-authored seed files use camelCase estMinutes.
+        mockMvc.perform(post("/api/ai/seed-plan/manual")
+                        .header("Authorization", bearer())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("topics", List.of(Map.of(
+                                "slug", "est-casing",
+                                "exercises", List.of(
+                                        Map.of("title", "snake exercise", "est_minutes", 45),
+                                        Map.of("title", "camel exercise", "estMinutes", 30))))))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.seeded").value(1));
+
+        assertThat(exerciseRepository.findByUserIdAndTopicIdOrderByDisplayOrderAsc(testUserId, topic.getId()))
+                .extracting(Exercise::getTitle, Exercise::getEstMinutes)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("snake exercise", 45),
+                        org.assertj.core.groups.Tuple.tuple("camel exercise", 30));
     }
 
     // ── Mock interview: start → turn → completion feeds the loop ─────────────
