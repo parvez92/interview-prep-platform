@@ -72,16 +72,25 @@ public class SkillSurface {
         return entry.terms().stream().anyMatch(term -> containsTerm(haystack, term));
     }
 
+    /** Below this length, stripping a trailing "s" would leave a stem that matches anything. */
+    private static final int MIN_STEM = 4;
+
     /**
      * Substring match, but bounded on word characters so short terms like "rest" or "g1"
-     * don't fire inside "interest" or "g10".
+     * don't fire inside "interest" or "g10". Matching is number-insensitive at the end:
+     * the term "virtual thread" must find "Virtual threads", and "collector" must find
+     * "collectors", or a plan that teaches a topic is reported as not covering it.
      */
     static boolean containsTerm(String lowerHaystack, String term) {
         String t = term.toLowerCase(Locale.ROOT);
         if (t.isBlank()) return false;
-        String prefix = Character.isLetterOrDigit(t.charAt(0)) ? "\\b" : "";
-        String suffix = Character.isLetterOrDigit(t.charAt(t.length() - 1)) ? "\\b" : "";
-        Pattern p = Pattern.compile(prefix + Pattern.quote(t) + suffix);
+
+        String stem = t.endsWith("s") && t.length() > MIN_STEM ? t.substring(0, t.length() - 1) : t;
+        String prefix = Character.isLetterOrDigit(stem.charAt(0)) ? "\\b" : "";
+        // the optional plural sits inside the boundary: \bcollector s? \b
+        String suffix = Character.isLetterOrDigit(stem.charAt(stem.length() - 1)) ? "s?\\b" : "s?";
+
+        Pattern p = Pattern.compile(prefix + Pattern.quote(stem) + suffix);
         Matcher m = p.matcher(lowerHaystack);
         return m.find();
     }
