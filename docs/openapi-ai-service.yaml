@@ -1,0 +1,1522 @@
+# Generated from the live FastAPI app (GET /openapi.json), then hand-enriched.
+# Regenerate: curl -s localhost:8000/openapi.json | <this script>
+openapi: 3.1.0
+info:
+  title: prep-loop — ai-service (internal)
+  version: 2.0.0
+  description: "The brains: résumé parsing, plan generation, the content pipeline (narrative → depth →\n\
+    support), RAG over pgvector, LangGraph agents, the mock interviewer, and scoring.\n\n**Internal only.**\
+    \ No browser ever calls this service. Every request arrives from\nbackend-core's `AiClient`, authenticated\
+    \ with a shared service token and carrying the\nacting user's id in a header. Never expose port 8000\
+    \ publicly.\n\n### Contract with backend-core\n- `X-Service-Token` — shared secret from Vault. Required.\
+    \ Mismatch → `401`.\n- `X-User-Id` — the acting user. Everything (cache, usage, vectors) is scoped\
+    \ to it.\n- `X-Provider` / `X-Model` — optional overrides. Java's `BudgetGuard` also injects a\n \
+    \ `model` field into the JSON body; when both are present the body wins.\n\n### Response envelope\n\
+    Every model-backed endpoint returns `{result, meta}`. `meta.cached=true` means the\nanswer came from\
+    \ `ai_cache` and cost nothing — the cache is checked before any paid\ncall, and every real call writes\
+    \ a `usage_log` row.\n\n### Agents\n`/ai/agents/**` are bounded ReAct loops (max 3–6 steps, 30s deadline,\
+    \ token cap,\nallow-listed tools, idempotent writes, one `agent_run` trace row). Their tools call\n\
+    **back into backend-core's REST API** — the agents have no second data path, only\nlocal pgvector\
+    \ search.\n\nThis file is generated from the live FastAPI app and hand-enriched. Regenerate with:\n\
+    `curl -s localhost:8000/openapi.json`."
+paths:
+  /ai/parse-resume:
+    post:
+      tags:
+      - parse
+      summary: Extract skills, gaps, domains and experience from résumé text.
+      operationId: parse_resume_ai_parse_resume_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      - name: x-ollama-url
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Ollama-Url
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ParseResumeRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/generate-plan:
+    post:
+      tags:
+      - parse
+      summary: Generate plan STRUCTURE — phases, themed weeks, coarse topics. No depth content.
+      operationId: generate_plan_ai_generate_plan_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      - name: x-ollama-url
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Ollama-Url
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GeneratePlanRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+      description: 'Structure only. Rules, in priority order: at least 60% of weeks deep-dive the
+
+        candidate''s own stack; role-relevant gaps get at most ~25%; supplementary interests at
+
+        most ~15%. Phase 1 is always a skills-depth audit; the final phase is always mock loops.
+
+
+        Each coarse topic carries `source` (`resume|standard|interest`) recording *why* it was
+
+        added, and `split_hint` telling the depth pass whether to split it.'
+  /ai/embed-resume:
+    post:
+      tags:
+      - parse
+      summary: Chunk and embed the résumé into pgvector for retrieval.
+      operationId: embed_resume_ai_embed_resume_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbedResumeRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/deep-dive:
+    post:
+      tags:
+      - depth
+      summary: Expand coarse units into dense study cards; splits a unit into 1–3 interview-distinct subtopics.
+      operationId: deep_dive_ai_deep_dive_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      - name: x-ollama-url
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Ollama-Url
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepthRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+      description: 'The density pass. Uses enumerate-then-compress (`_scratch` first, then compressed
+
+        `points`), a per-category gold-standard exemplar, and RAG over already-generated cards
+
+        so later weeks don''t re-teach earlier ones.
+
+
+        `must_cover` makes this a **repair pass**: backend-core sends the scope terms a previous
+
+        attempt dropped, and the prompt asks for exactly one card per dropped term. `must_cover`
+
+        is part of the cache key, so a repair result is never served to a plain call.
+
+
+        `regenerate: true` bypasses the cache — used for per-topic validation retries.'
+  /ai/narrative:
+    post:
+      tags:
+      - narrative
+      summary: 'One cheap pass over the frozen structure: phase blurbs, week bridges and anchors.'
+      operationId: narrative_ai_narrative_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      - name: x-ollama-url
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Ollama-Url
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NarrativeRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/guide:
+    post:
+      tags:
+      - guide
+      summary: Generate one tab (overview/resources/exercises/questions) of a topic's guide.
+      operationId: guide_ai_guide_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuideRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/embed-weak-answer:
+    post:
+      tags:
+      - feedback
+      summary: Embed a weak interview answer so future guides can target the gap.
+      operationId: embed_weak_answer_endpoint_ai_embed_weak_answer_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbedWeakAnswerRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/delete-weak-answer:
+    post:
+      tags:
+      - feedback
+      summary: Remove a weak-answer vector once the gap is closed.
+      operationId: delete_weak_answer_endpoint_ai_delete_weak_answer_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteWeakAnswerRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/seed-plan:
+    post:
+      tags:
+      - seed
+      summary: 'Support pass: resources, questions and exercises for a batch of topics.'
+      operationId: seed_plan_ai_seed_plan_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      - name: x-ollama-url
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Ollama-Url
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SeedPlanRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/score:
+    post:
+      tags:
+      - score
+      summary: Score an answer against a rubric.
+      operationId: readiness_score_ai_score_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoreRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/analyze:
+    post:
+      tags:
+      - analyze
+      summary: 'Grade a free-text answer: rating 1–5, strengths, weaknesses, ideal points.'
+      operationId: analyze_answer_ai_analyze_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyzeRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/mock:
+    post:
+      tags:
+      - mock
+      summary: Conversational mock interviewer — one turn per call.
+      operationId: mock_interview_ai_mock_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MockRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/agents/jobfit:
+    post:
+      tags:
+      - agents
+      summary: 'Agent: score a job description against the résumé.'
+      operationId: jobfit_ai_agents_jobfit_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobFitRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/agents/debrief:
+    post:
+      tags:
+      - agents
+      summary: 'Agent: turn interview notes into review flags and STAR material.'
+      operationId: debrief_ai_agents_debrief_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DebriefRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/agents/coach:
+    post:
+      tags:
+      - agents
+      summary: 'Agent: rebalance the plan from progress and open flags.'
+      operationId: coach_ai_agents_coach_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CoachRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/agents/prep-pack:
+    post:
+      tags:
+      - agents
+      summary: 'Agent: build a per-interview prep pack from the job description.'
+      operationId: prep_pack_ai_agents_prep_pack_post
+      parameters:
+      - name: x-service-token
+        in: header
+        required: true
+        schema:
+          type: string
+          title: X-Service-Token
+      - name: x-user-id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-User-Id
+      - name: x-provider
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Provider
+      - name: x-model
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrepPackRequest'
+      responses:
+        '200':
+          description: Success. `meta.cached=true` means no model was called.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiEnvelope'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+  /ai/settings:
+    get:
+      tags:
+      - settings
+      summary: Resolved provider/model settings for the acting user.
+      description: 'Returns available AI modes and connection details.
+
+        The frontend settings page uses this to display mode options and MCP URLs.
+
+        No auth required — purely informational.'
+      operationId: get_ai_settings_ai_settings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '401':
+          description: Missing or wrong `X-Service-Token`.
+        '422':
+          description: Request body failed pydantic validation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      summary: Liveness probe — the only unauthenticated route.
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+      security: []
+components:
+  schemas:
+    AnalyzeRequest:
+      properties:
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        question:
+          type: string
+          title: Question
+        answer:
+          type: string
+          title: Answer
+        question_type:
+          type: string
+          title: Question Type
+          default: technical
+      type: object
+      required:
+      - question
+      - answer
+      title: AnalyzeRequest
+    CoachRequest:
+      properties:
+        review_flags:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Review Flags
+        mock_history:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Mock History
+          default: []
+        seniority:
+          type: string
+          title: Seniority
+          default: mid
+        strong_areas:
+          items:
+            type: string
+          type: array
+          title: Strong Areas
+          default: []
+        target_role:
+          type: string
+          title: Target Role
+          default: Software Engineer
+      type: object
+      required:
+      - review_flags
+      title: CoachRequest
+    DebriefRequest:
+      properties:
+        interview:
+          additionalProperties: true
+          type: object
+          title: Interview
+        qa_pairs:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Qa Pairs
+        interview_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Interview Id
+      type: object
+      required:
+      - interview
+      - qa_pairs
+      title: DebriefRequest
+    DeleteWeakAnswerRequest:
+      properties:
+        question_id:
+          type: integer
+          title: Question Id
+      type: object
+      required:
+      - question_id
+      title: DeleteWeakAnswerRequest
+    DepthRequest:
+      properties:
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        topics:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Topics
+        seniority:
+          type: string
+          title: Seniority
+          default: mid
+        target_role:
+          type: string
+          title: Target Role
+          default: Software Engineer
+        regenerate:
+          type: boolean
+          title: Regenerate
+          default: false
+        must_cover:
+          items:
+            type: string
+          type: array
+          title: Must Cover
+          default: []
+      type: object
+      required:
+      - topics
+      title: DepthRequest
+    EmbedResumeRequest:
+      properties:
+        raw_text:
+          type: string
+          title: Raw Text
+      type: object
+      required:
+      - raw_text
+      title: EmbedResumeRequest
+    EmbedWeakAnswerRequest:
+      properties:
+        question_id:
+          type: integer
+          title: Question Id
+        topic_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Topic Id
+        text:
+          type: string
+          title: Text
+      type: object
+      required:
+      - question_id
+      - text
+      title: EmbedWeakAnswerRequest
+    GeneratePlanRequest:
+      properties:
+        profile:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Profile
+        profileJson:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Profilejson
+        targets:
+          additionalProperties: true
+          type: object
+          title: Targets
+          default: {}
+        additionalContext:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Additionalcontext
+        regenerate:
+          type: boolean
+          title: Regenerate
+          default: false
+      type: object
+      title: GeneratePlanRequest
+    GuideRequest:
+      properties:
+        tab:
+          type: string
+          title: Tab
+          default: overview
+        topic_title:
+          type: string
+          title: Topic Title
+        topic_category:
+          type: string
+          title: Topic Category
+          default: ''
+        seniority:
+          type: string
+          title: Seniority
+          default: mid
+        confidence:
+          type: integer
+          title: Confidence
+          default: 3
+        skills:
+          items:
+            type: string
+          type: array
+          title: Skills
+          default: []
+        angle:
+          type: string
+          title: Angle
+          default: ''
+        review_reasons:
+          items:
+            type: string
+          type: array
+          title: Review Reasons
+          default: []
+      type: object
+      required:
+      - topic_title
+      title: GuideRequest
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    JobFitRequest:
+      properties:
+        job_description:
+          type: string
+          title: Job Description
+        company:
+          type: string
+          title: Company
+        role:
+          type: string
+          title: Role
+        profile:
+          additionalProperties: true
+          type: object
+          title: Profile
+        job_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Job Id
+      type: object
+      required:
+      - job_description
+      - company
+      - role
+      - profile
+      title: JobFitRequest
+    MockRequest:
+      properties:
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        target_role:
+          type: string
+          title: Target Role
+          default: Software Engineer
+        topic:
+          type: string
+          title: Topic
+          default: general
+        difficulty:
+          type: string
+          title: Difficulty
+          default: medium
+        interview_type:
+          type: string
+          title: Interview Type
+          default: technical
+        seniority:
+          type: string
+          title: Seniority
+          default: mid
+        strengths:
+          items:
+            type: string
+          type: array
+          title: Strengths
+          default: []
+        history:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: History
+          default: []
+      type: object
+      title: MockRequest
+    NarrativeRequest:
+      properties:
+        model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Model
+        phases:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Phases
+        weeks:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Weeks
+        highlights:
+          items:
+            type: string
+          type: array
+          title: Highlights
+          default: []
+        target_role:
+          type: string
+          title: Target Role
+          default: Software Engineer
+      type: object
+      required:
+      - phases
+      - weeks
+      title: NarrativeRequest
+    ParseResumeRequest:
+      properties:
+        raw_text:
+          type: string
+          title: Raw Text
+      type: object
+      required:
+      - raw_text
+      title: ParseResumeRequest
+    PrepPackRequest:
+      properties:
+        job_description:
+          type: string
+          title: Job Description
+        company:
+          type: string
+          title: Company
+        role:
+          type: string
+          title: Role
+        profile:
+          additionalProperties: true
+          type: object
+          title: Profile
+        job_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Job Id
+      type: object
+      required:
+      - job_description
+      - company
+      - role
+      - profile
+      title: PrepPackRequest
+    ScoreRequest:
+      properties:
+        topics:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Topics
+        interview_history:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Interview History
+          default: []
+        target_role:
+          type: string
+          title: Target Role
+          default: Software Engineer
+      type: object
+      required:
+      - topics
+      title: ScoreRequest
+    SeedPlanRequest:
+      properties:
+        topics:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Topics
+        profile:
+          additionalProperties: true
+          type: object
+          title: Profile
+          default: {}
+        target_role:
+          type: string
+          title: Target Role
+          default: ''
+        batch_size:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Batch Size
+      type: object
+      required:
+      - topics
+      title: SeedPlanRequest
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    AiMeta:
+      type: object
+      properties:
+        model:
+          type: string
+        cached:
+          type: boolean
+          description: Served from ai_cache; cost was zero.
+        tokens:
+          type: integer
+        cost:
+          type: number
+          format: double
+          description: USD for this call.
+    AiEnvelope:
+      type: object
+      required:
+      - result
+      - meta
+      properties:
+        result:
+          type: object
+          additionalProperties: true
+          description: Endpoint-specific payload.
+        meta:
+          $ref: '#/components/schemas/AiMeta'
+  securitySchemes:
+    serviceToken:
+      type: apiKey
+      in: header
+      name: X-Service-Token
+      description: Shared secret loaded from Vault by both services.
+servers:
+- url: http://ai:8000
+  description: docker-compose internal network
+- url: http://localhost:8000
+  description: Local, for debugging only
+security:
+- serviceToken: []
+tags:
+- name: depth
+  description: Content pipeline — the density fix.
+- name: agents
+  description: Bounded ReAct loops whose tools call back into backend-core.
